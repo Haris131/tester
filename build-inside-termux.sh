@@ -8,7 +8,7 @@ apt update -y
 apt --fix-broken install -y || true
 
 echo "=== Installing system dependencies ==="
-apt install -y libusb python clang binutils make libxml2 libxslt
+apt install -y libusb python clang binutils make libxml2 libxslt rust
 
 echo "=== Installing Python build tools ==="
 python3 -m pip install --upgrade pip wheel setuptools

@@ -42,16 +42,15 @@ jobs:
         timeout-minutes: 180
         run: |
           if [ "${{ matrix.target.arch }}" = "arm" ]; then
-            # armv7: QEMU user mode blocks personality() syscall by default
-            # Use --privileged to bypass seccomp, plus newer tonistiigi/binfmt QEMU
+            # armv7: proot's personality() syscall not supported by QEMU user mode
+            # Use proot manually WITHOUT -p flag, only for UID mapping (root → 1000)
             docker run --rm --privileged \
               --platform ${{ matrix.target.platform }} \
               -v $PWD:/workspace \
-              -e PREFIX=/data/data/com.termux/files/usr \
-              -e HOME=/data/data/com.termux/files/usr/home \
-              -e PATH=/data/data/com.termux/files/usr/bin:/system/bin \
-              --entrypoint /data/data/com.termux/files/usr/bin/bash \
+              --entrypoint /data/data/com.termux/files/usr/bin/proot \
               termux/termux-docker:${{ matrix.target.arch }} \
+              -u 1000 -g 1000 -w / \
+              /data/data/com.termux/files/usr/bin/bash \
               /workspace/build-inside-termux.sh
           else
             docker run --rm \
