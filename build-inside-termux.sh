@@ -37,7 +37,7 @@ tar xzf keystone-engine-*.tar.gz
 SRC_DIR=$(find . -maxdepth 1 -type d -name "keystone-engine*" | head -1)
 cd "$SRC_DIR"
 find . -name CMakeLists.txt -exec sed -i 's/cmake_minimum_required(VERSION [0-9.]*)/cmake_minimum_required(VERSION 3.5)/' {} +
-sed -i '/cmake_policy(SET CMP0051 OLD)/d' src/CMakeLists.txt
+find . -name CMakeLists.txt -exec sed -i '/cmake_policy(SET CMP0051 OLD)/d' {} +
 python3 -m pip install . 2>&1
 cd /workspace
 
