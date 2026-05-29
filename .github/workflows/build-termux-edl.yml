@@ -48,22 +48,15 @@ jobs:
       - name: Build inside termux-docker
         timeout-minutes: 180
         run: |
-          if [ "${{ matrix.target.arch }}" = "arm" ]; then
-            # armv7: --privileged needed for QEMU personality() syscall.
-            # Root check is patched in build-inside-termux.sh via sed.
-            docker run --rm --privileged \
-              --platform ${{ matrix.target.platform }} \
-              -v $PWD:/workspace \
-              --entrypoint /data/data/com.termux/files/usr/bin/bash \
-              termux/termux-docker:${{ matrix.target.arch }} \
-              /workspace/build-inside-termux.sh
-          else
-            docker run --rm \
-              --platform ${{ matrix.target.platform }} \
-              -v $PWD:/workspace \
-              termux/termux-docker:${{ matrix.target.arch }} \
-              bash /workspace/build-inside-termux.sh
-          fi
+          # armv7 needs --privileged for QEMU personality() syscall emulation.
+          # Default entrypoint uses "su system" → runs as UID 1000,
+          # so Termux root check in apt is bypassed naturally.
+          DOCKER_OPTS="$([ "${{ matrix.target.arch }}" = "arm" ] && echo '--privileged')"
+          docker run $DOCKER_OPTS --rm \
+            --platform ${{ matrix.target.platform }} \
+            -v $PWD:/workspace \
+            termux/termux-docker:${{ matrix.target.arch }} \
+            bash /workspace/build-inside-termux.sh
 
       - name: Build .deb package
         shell: bash

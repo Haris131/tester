@@ -1,12 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-# Disable Termux root check in apt/pkg (run as root inside container)
-for f in /data/data/com.termux/files/usr/bin/apt /data/data/com.termux/files/usr/bin/pkg; do
-  [ -f "$f" ] && sed -i 's/root has been disabled/root check disabled for CI/g' "$f" 2>/dev/null || true
-  [ -f "$f" ] && sed -i 's/exit 1/return 0/g' "$f" 2>/dev/null || true
-done
-
 # Needed by maturin (rust/cryptography build)
 export ANDROID_API_LEVEL=31
 
