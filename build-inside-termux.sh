@@ -3,7 +3,9 @@ set -euo pipefail
 
 echo "=== Updating Termux packages ==="
 pkg update -y
-pkg upgrade -y
+
+# Fix any broken dependencies (common issue with Termux repo sync)
+apt --fix-broken install -y || true
 
 echo "=== Installing system dependencies ==="
 pkg install -y libusb python clang binutils make
