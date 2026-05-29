@@ -1,0 +1,167 @@
+name: Build Termux EDL
+on:
+  push:
+    branches: [ termux-edl ]
+  pull_request:
+    branches: [ termux-edl ]
+  workflow_dispatch:
+
+env:
+  PKG_VERSION: "3.62"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - arch: aarch64
+            platform: linux/arm64/v8
+            deb_arch: arm64
+          - arch: arm
+            platform: linux/arm/v7
+            deb_arch: armhf
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,arm
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Haris131/termux-edl
+          ref: termux-edl
+          path: edl-src
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Build inside termux-docker
+        timeout-minutes: 180
+        run: |
+          docker run --rm \
+            --platform ${{ matrix.target.platform }} \
+            -v $PWD:/workspace \
+            termux/termux-docker:${{ matrix.target.arch }} \
+            bash /workspace/build-inside-termux.sh
+
+      - name: Build .deb package
+        shell: bash
+        run: |
+          BINARY="dist/edl"
+          if [ ! -f "$BINARY" ]; then
+            echo "Binary not found at $BINARY"
+            exit 1
+          fi
+
+          PKG="termux-edl"
+          ARCH="${{ matrix.target.deb_arch }}"
+          DEB_DIR="${PKG}_${{ env.PKG_VERSION }}_${ARCH}"
+          TP="data/data/com.termux/files/usr"
+
+          mkdir -p "$DEB_DIR/DEBIAN"
+          mkdir -p "$DEB_DIR/$TP/bin"
+          mkdir -p "$DEB_DIR/$TP/share/termux-edl/Loaders"
+
+          install -m 755 "$BINARY" "$DEB_DIR/$TP/bin/edl"
+
+          # postinst
+          {
+            printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash'
+            printf '%s\n' 'set -e'
+            printf '%s\n' 'LOADERS_DIR="/data/data/com.termux/files/usr/share/termux-edl/Loaders"'
+            printf '%s\n' 'if [ ! -f "$LOADERS_DIR/.download_done" ]; then'
+            printf '%s\n' '  echo ""'
+            printf '%s\n' '  echo "=============================================="'
+            printf '%s\n' '  echo " Downloading EDL Loaders..."'
+            printf '%s\n' '  echo "=============================================="'
+            printf '%s\n' '  echo ""'
+            printf '%s\n' '  rm -rf "$LOADERS_DIR"'
+            printf '%s\n' '  if command -v git &>/dev/null; then'
+            printf '%s\n' '    git clone --depth 1 https://github.com/bkerler/Loaders "$LOADERS_DIR"'
+            printf '%s\n' '    rm -rf "$LOADERS_DIR/.git"'
+            printf '%s\n' '    touch "$LOADERS_DIR/.download_done"'
+            printf '%s\n' '    echo ""'
+            printf '%s\n' '    echo " Loaders downloaded successfully."'
+            printf '%s\n' '  else'
+            printf '%s\n' '    echo " WARNING: git not found."'
+            printf '%s\n' '    echo " Install git: pkg install git"'
+            printf '%s\n' '    echo " Then: git clone --depth 1 https://github.com/bkerler/Loaders $LOADERS_DIR"'
+            printf '%s\n' '    mkdir -p "$LOADERS_DIR"'
+            printf '%s\n' '  fi'
+            printf '%s\n' '  echo ""'
+            printf '%s\n' 'fi'
+          } > "$DEB_DIR/DEBIAN/postinst"
+          chmod 755 "$DEB_DIR/DEBIAN/postinst"
+
+          # postrm
+          {
+            printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash'
+            printf '%s\n' 'set -e'
+            printf '%s\n' 'LOADERS_DIR="/data/data/com.termux/files/usr/share/termux-edl/Loaders"'
+            printf '%s\n' 'if [ "$1" = "purge" ] || [ "$1" = "remove" ]; then'
+            printf '%s\n' '  echo "Removing EDL Loaders..."'
+            printf '%s\n' '  rm -rf "$LOADERS_DIR"'
+            printf '%s\n' 'fi'
+          } > "$DEB_DIR/DEBIAN/postrm"
+          chmod 755 "$DEB_DIR/DEBIAN/postrm"
+
+          # control
+          {
+            printf '%s\n' "Package: $PKG"
+            printf '%s\n' "Version: ${{ env.PKG_VERSION }}"
+            printf '%s\n' "Section: utils"
+            printf '%s\n' "Priority: optional"
+            printf '%s\n' "Architecture: $ARCH"
+            printf '%s\n' "Maintainer: Haris131 <https://github.com/Haris131>"
+            printf '%s\n' "Description: Qualcomm EDL tool (Sahara/Firehose) for Termux without root permissions"
+            printf '%s\n' " Static binary. Supports Sahara V3 protocol,"
+            printf '%s\n' " firehose flashing, memory dumping, and diag."
+            printf '%s\n' "Depends: termux-api, libusb, git"
+            printf '%s\n' "Homepage: https://github.com/Haris131/termux-edl"
+          } > "$DEB_DIR/DEBIAN/control"
+
+          dpkg-deb --build --root-owner-group "$DEB_DIR"
+          mkdir -p debs
+          mv "${DEB_DIR}.deb" "debs/${PKG}_${{ env.PKG_VERSION }}_${ARCH}.deb"
+          echo "=== .deb built ==="
+          dpkg-deb --info "debs/${PKG}_${{ env.PKG_VERSION }}_${ARCH}.deb"
+          dpkg-deb --contents "debs/${PKG}_${{ env.PKG_VERSION }}_${ARCH}.deb"
+
+      - name: Organize artifacts
+        run: |
+          mkdir -p upload
+          cp dist/edl "upload/edl-${{ matrix.target.arch }}"
+          cp debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb upload/
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: edl-binary-${{ matrix.target.arch }}
+          path: upload/edl-${{ matrix.target.arch }}
+          if-no-files-found: error
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: edl-deb-${{ matrix.target.arch }}
+          path: upload/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: edl-*
+          merge-multiple: true
+          path: release-assets
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
