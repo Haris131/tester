@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-set -uo pipefail
+set -euo pipefail
 
 # termux-docker default entrypoint already runs as system user (UID 1000).
 # apt root check is bypassed naturally.
@@ -17,7 +17,7 @@ apt-get update -y 2>&1 || { echo "FAIL: apt-get update"; exit 1; }
 apt-get --fix-broken install -y 2>&1 || true
 
 echo "=== Installing system dependencies ==="
-apt-get install -y libusb python clang binutils make libxml2 libxslt rust 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
+apt-get install -y libusb python clang binutils make libxml2 libxslt rust cmake file termux-elf-cleaner 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
 
 echo "=== Installing Python build tools ==="
 python3 -m pip install --upgrade pip wheel setuptools 2>&1
@@ -31,8 +31,8 @@ echo "=== Installing PyInstaller ==="
 python3 -m pip install pyinstaller 2>&1
 
 echo "=== Installing edl ==="
-mkdir -p /tmp/build
-cp -a /workspace/edl-src /tmp/build/edl
+mkdir -p /tmp/build/edl
+cp -a /workspace/edl-src/. /tmp/build/edl/
 cd /tmp/build/edl
 
 echo "=== Patching loader_db.py ==="
