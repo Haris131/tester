@@ -3,6 +3,8 @@ set -euo pipefail
 
 # Needed by maturin (rust/cryptography build)
 export ANDROID_API_LEVEL=31
+export CFLAGS="-Wno-register"
+export CXXFLAGS="-Wno-register"
 
 echo "=== Updating Termux packages ==="
 apt-get update -y
@@ -10,8 +12,12 @@ apt-get update -y
 # Fix any broken dependencies (common issue with Termux repo sync)
 apt-get --fix-broken install -y || true
 
+echo "=== Adding tur-repo (for gcc-11) ==="
+apt-get install -y tur-repo
+apt-get update -y
+
 echo "=== Installing system dependencies ==="
-apt-get install -y libusb python clang binutils make libxml2 libxslt rust
+apt-get install -y libusb python clang binutils-is-llvm gcc-11 make libxml2 libxslt rust
 
 echo "=== Installing Python build tools ==="
 python3 -m pip install --upgrade pip wheel setuptools

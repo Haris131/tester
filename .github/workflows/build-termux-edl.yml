@@ -16,7 +16,7 @@ jobs:
       matrix:
         target:
           - arch: aarch64
-            platform: linux/arm64/v8
+            platform: linux/arm64
             deb_arch: arm64
           - arch: arm
             platform: linux/arm/v7
