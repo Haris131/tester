@@ -49,21 +49,14 @@ jobs:
         timeout-minutes: 180
         run: |
           if [ "${{ matrix.target.arch }}" = "arm" ]; then
-            # armv7: run as root first to fix permissions, then use chroot
-            # --userspec to drop to UID 1000 (bypasses Termux root check).
+            # armv7: --privileged needed for QEMU personality() syscall.
+            # Root check is patched in build-inside-termux.sh via sed.
             docker run --rm --privileged \
-              --dns 8.8.8.8 \
               --platform ${{ matrix.target.platform }} \
               -v $PWD:/workspace \
-              -e HOME=/data/data/com.termux/files/usr/home \
-              -e PREFIX=/data/data/com.termux/files/usr \
-              -e PATH=/data/data/com.termux/files/usr/bin:/system/bin \
               --entrypoint /data/data/com.termux/files/usr/bin/bash \
               termux/termux-docker:${{ matrix.target.arch }} \
-              -c "
-                chmod -R 777 /data/data/com.termux/files/usr/var 2>/dev/null
-                exec /usr/sbin/chroot --userspec=1000:1000 / /data/data/com.termux/files/usr/bin/bash /workspace/build-inside-termux.sh
-              "
+              /workspace/build-inside-termux.sh
           else
             docker run --rm \
               --platform ${{ matrix.target.platform }} \
