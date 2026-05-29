@@ -42,9 +42,9 @@ jobs:
         timeout-minutes: 180
         run: |
           if [ "${{ matrix.target.arch }}" = "arm" ]; then
-            # armv7: QEMU user mode blocks personality() syscall used by proot entrypoint.
-            # Bypass entrypoint, use bash directly. apt-get works as root.
-            docker run --rm \
+            # armv7: QEMU user mode needs --privileged for personality() syscall.
+            # Bypass proot entrypoint, use bash directly + apt-get (no root check).
+            docker run --rm --privileged \
               --platform ${{ matrix.target.platform }} \
               -v $PWD:/workspace \
               -e PREFIX=/data/data/com.termux/files/usr \
