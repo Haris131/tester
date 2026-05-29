@@ -22,9 +22,9 @@ echo "=== Installing PyInstaller ==="
 python3 -m pip install pyinstaller
 
 echo "=== Installing edl ==="
-mkdir -p "$HOME/build"
-cp -a /workspace/edl-src "$HOME/build/edl"
-cd "$HOME/build/edl"
+mkdir -p /tmp/build
+cp -a /workspace/edl-src /tmp/build/edl
+cd /tmp/build/edl
 
 echo "=== Patching loader_db.py ==="
 python3 /workspace/patch-loader.py

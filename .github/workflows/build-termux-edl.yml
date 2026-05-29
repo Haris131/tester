@@ -38,21 +38,31 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Prepare workspace for non-root build
+        run: |
+          mkdir -p dist build
+          chmod 777 dist build
+
       - name: Build inside termux-docker
         timeout-minutes: 180
         run: |
           if [ "${{ matrix.target.arch }}" = "arm" ]; then
-            # armv7: QEMU user mode needs --privileged for personality() syscall.
-            # Bypass proot entrypoint, use bash directly + apt-get (no root check).
+            # armv7: --privileged needed for QEMU personality() syscall.
+            # --user 1000:1000 bypasses Termux root check in pkg/apt.
+            # Pre-chmod apt dirs since running as non-root.
             docker run --rm --privileged \
               --platform ${{ matrix.target.platform }} \
               -v $PWD:/workspace \
-              -e PREFIX=/data/data/com.termux/files/usr \
+              --user 1000:1000 \
               -e HOME=/data/data/com.termux/files/usr/home \
+              -e PREFIX=/data/data/com.termux/files/usr \
               -e PATH=/data/data/com.termux/files/usr/bin:/system/bin \
               --entrypoint /data/data/com.termux/files/usr/bin/bash \
               termux/termux-docker:${{ matrix.target.arch }} \
-              /workspace/build-inside-termux.sh
+              -c "
+                chmod -R 777 /data/data/com.termux/files/usr/var 2>/dev/null || true
+                exec /workspace/build-inside-termux.sh
+              "
           else
             docker run --rm \
               --platform ${{ matrix.target.platform }} \
