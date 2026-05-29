@@ -42,6 +42,8 @@ jobs:
         run: |
           mkdir -p dist build
           chmod 777 dist build
+          chmod +x build-inside-termux.sh
+          chmod -R a+rX .
 
       - name: Build inside termux-docker
         timeout-minutes: 180
