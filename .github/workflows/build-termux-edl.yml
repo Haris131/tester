@@ -48,15 +48,13 @@ jobs:
       - name: Build inside termux-docker
         timeout-minutes: 180
         run: |
-          # QEMU emulation needs --privileged for personality() and other
-          # syscalls, even for aarch64. The build script drops to UID 1000
-          # via su at the start to bypass apt's root check.
+          # termux-docker default entrypoint starts dnsmasq (DNS) and
+          # drops to system user via su. With --privileged, QEMU emulation
+          # works correctly for both aarch64 and arm.
           docker run --privileged --rm \
             -v $PWD:/workspace \
-            --dns 8.8.8.8 \
-            --entrypoint /data/data/com.termux/files/usr/bin/bash \
             termux/termux-docker:${{ matrix.target.arch }} \
-            /workspace/build-inside-termux.sh
+            bash /workspace/build-inside-termux.sh
 
       - name: Build .deb package
         shell: bash
