@@ -31,8 +31,8 @@ export TMPDIR="$PREFIX/tmp"
 
 # keystone-engine needs a CMakeLists.txt patch for cmake >= 4.x
 echo "=== Installing keystone-engine (patched for cmake 4.x) ==="
-python3 -m pip download keystone-engine --no-deps --no-binary :all: -d /workspace/keystone-src 2>&1
-cd /workspace/keystone-src
+python3 -m pip download keystone-engine --no-deps --no-binary :all: -d "$TMPDIR/keystone-src" 2>&1
+cd "$TMPDIR/keystone-src"
 tar xzf keystone-engine-*.tar.gz
 SRC_DIR=$(find . -maxdepth 1 -type d -name "keystone-engine*" | head -1)
 cd "$SRC_DIR"
