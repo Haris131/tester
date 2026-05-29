@@ -49,12 +49,15 @@ jobs:
         timeout-minutes: 180
         run: |
           # armv7 needs --privileged for QEMU personality() syscall emulation.
-          # Default entrypoint uses "su system" → runs as UID 1000,
-          # so Termux root check in apt is bypassed naturally.
-          DOCKER_OPTS="$([ "${{ matrix.target.arch }}" = "arm" ] && echo '--privileged')"
-          docker run $DOCKER_OPTS --rm \
-            --platform ${{ matrix.target.platform }} \
+          # Use entrypoint_root.sh to stay as root. Then proot -u 1000
+          # inside the script fakes UID to bypass apt root check.
+          PRIV="$([ "${{ matrix.target.arch }}" = "arm" ] && echo '--privileged')"
+          docker run $PRIV --rm \
             -v $PWD:/workspace \
+            -e HOME=/data/data/com.termux/files/usr/home \
+            -e PREFIX=/data/data/com.termux/files/usr \
+            -e PATH=/data/data/com.termux/files/usr/bin:/system/bin \
+            --entrypoint /entrypoint_root.sh \
             termux/termux-docker:${{ matrix.target.arch }} \
             bash /workspace/build-inside-termux.sh
 

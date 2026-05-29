@@ -1,6 +1,14 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
+# If running as root, re-exec as system user (UID 1000) via su.
+# This bypasses apt's compiled-in root check naturally.
+if [ "$(id -u)" = "0" ]; then
+  exec /system/bin/su system -s /data/data/com.termux/files/usr/bin/bash "$0" "$@"
+fi
+
+# Now running as UID 1000 (system user) — apt root check passes.
+
 # Needed by maturin (rust/cryptography build)
 export ANDROID_API_LEVEL=31
 export CFLAGS="-Wno-register"
@@ -8,8 +16,6 @@ export CXXFLAGS="-Wno-register"
 
 echo "=== Updating Termux packages ==="
 apt-get update -y
-
-# Fix any broken dependencies (common issue with Termux repo sync)
 apt-get --fix-broken install -y || true
 
 echo "=== Adding tur-repo (for gcc-11) ==="
@@ -43,7 +49,6 @@ python3 -m pip install --no-deps .
 echo "=== Building static binary with PyInstaller ==="
 PREFIX="/data/data/com.termux/files/usr"
 
-# Detect actual libpython version (avoid hardcoded version mismatch)
 PYTHON_LIBS=$(ls "$PREFIX/lib/libpython3"*.so 2>/dev/null || true)
 ADD_BINARY_ARGS=""
 for f in $PYTHON_LIBS; do
