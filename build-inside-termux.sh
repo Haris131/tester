@@ -27,10 +27,12 @@ python3 -m pip install pyusb pyserial docopt pycryptodome pycryptodomex colorama
             capstone qrcode requests \
             passlib lxml 2>&1
 
+export TMPDIR="$PREFIX/tmp"
+
 # keystone-engine needs a CMakeLists.txt patch for cmake >= 4.x
 echo "=== Installing keystone-engine (patched for cmake 4.x) ==="
-python3 -m pip download keystone-engine --no-deps --no-binary :all: -d /tmp/keystone-src 2>&1
-cd /tmp/keystone-src
+python3 -m pip download keystone-engine --no-deps --no-binary :all: -d /workspace/keystone-src 2>&1
+cd /workspace/keystone-src
 tar xzf keystone-engine-*.tar.gz
 SRC_DIR=$(find . -maxdepth 1 -type d -name "keystone-engine*" | head -1)
 cd "$SRC_DIR"
@@ -42,9 +44,9 @@ echo "=== Installing PyInstaller ==="
 python3 -m pip install pyinstaller 2>&1
 
 echo "=== Installing edl ==="
-mkdir -p /tmp/build/edl
-cp -a /workspace/edl-src/. /tmp/build/edl/
-cd /tmp/build/edl
+mkdir -p "$TMPDIR/build-edl"
+cp -a /workspace/edl-src/. "$TMPDIR/build-edl/"
+cd "$TMPDIR/build-edl"
 
 echo "=== Patching loader_db.py ==="
 python3 /workspace/patch-loader.py 2>&1
