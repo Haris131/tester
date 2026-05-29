@@ -53,6 +53,7 @@ jobs:
           # via su at the start to bypass apt's root check.
           docker run --privileged --rm \
             -v $PWD:/workspace \
+            --dns 8.8.8.8 \
             --entrypoint /data/data/com.termux/files/usr/bin/bash \
             termux/termux-docker:${{ matrix.target.arch }} \
             /workspace/build-inside-termux.sh
