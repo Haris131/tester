@@ -36,7 +36,7 @@ cd "$TMPDIR/keystone-src"
 tar xzf keystone-engine-*.tar.gz
 SRC_DIR=$(find . -maxdepth 1 -type d -name "keystone-engine*" | head -1)
 cd "$SRC_DIR"
-sed -i 's/cmake_minimum_required(VERSION [0-9.]*)/cmake_minimum_required(VERSION 3.5)/' CMakeLists.txt
+sed -i 's/cmake_minimum_required(VERSION [0-9.]*)/cmake_minimum_required(VERSION 3.5)/' src/CMakeLists.txt
 python3 -m pip install . 2>&1
 cd /workspace
 
