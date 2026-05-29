@@ -49,17 +49,15 @@ jobs:
         timeout-minutes: 180
         run: |
           # armv7 needs --privileged for QEMU personality() syscall emulation.
-          # Use entrypoint_root.sh to stay as root. Then proot -u 1000
-          # inside the script fakes UID to bypass apt root check.
+          # Bypass default entrypoint (which uses su system with complex args)
+          # and run bash directly as root. The build script drops to system
+          # user via su system at the start.
           PRIV="$([ "${{ matrix.target.arch }}" = "arm" ] && echo '--privileged')"
           docker run $PRIV --rm \
             -v $PWD:/workspace \
-            -e HOME=/data/data/com.termux/files/usr/home \
-            -e PREFIX=/data/data/com.termux/files/usr \
-            -e PATH=/data/data/com.termux/files/usr/bin:/system/bin \
-            --entrypoint /entrypoint_root.sh \
+            --entrypoint /data/data/com.termux/files/usr/bin/bash \
             termux/termux-docker:${{ matrix.target.arch }} \
-            bash /workspace/build-inside-termux.sh
+            /workspace/build-inside-termux.sh
 
       - name: Build .deb package
         shell: bash

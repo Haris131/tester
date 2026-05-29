@@ -1,10 +1,16 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-# If running as root, re-exec as system user (UID 1000) via su.
+# If running as root, drop privileges to UID 1000 (system) via Python.
 # This bypasses apt's compiled-in root check naturally.
 if [ "$(id -u)" = "0" ]; then
-  exec /system/bin/su system -s /data/data/com.termux/files/usr/bin/bash "$0" "$@"
+  echo "=== Dropping root privileges to UID 1000 ==="
+  python3 - "$0" << 'EOF'
+import os, sys
+os.setuid(1000)
+os.execl('/data/data/com.termux/files/usr/bin/bash', 'bash', sys.argv[1])
+EOF
+  exit 1  # Should not reach here
 fi
 
 # Now running as UID 1000 (system user) — apt root check passes.
