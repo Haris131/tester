@@ -2,13 +2,13 @@
 set -euo pipefail
 
 echo "=== Updating Termux packages ==="
-apt update -y
+apt-get update -y
 
 # Fix any broken dependencies (common issue with Termux repo sync)
-apt --fix-broken install -y || true
+apt-get --fix-broken install -y || true
 
 echo "=== Installing system dependencies ==="
-apt install -y libusb python clang binutils make libxml2 libxslt rust
+apt-get install -y libusb python clang binutils make libxml2 libxslt rust
 
 echo "=== Installing Python build tools ==="
 python3 -m pip install --upgrade pip wheel setuptools
