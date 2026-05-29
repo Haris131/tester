@@ -24,8 +24,19 @@ python3 -m pip install --upgrade pip wheel setuptools 2>&1
 
 echo "=== Installing edl Python dependencies ==="
 python3 -m pip install pyusb pyserial docopt pycryptodome pycryptodomex colorama \
-            capstone keystone-engine qrcode requests \
+            capstone qrcode requests \
             passlib lxml 2>&1
+
+# keystone-engine needs a CMakeLists.txt patch for cmake >= 4.x
+echo "=== Installing keystone-engine (patched for cmake 4.x) ==="
+python3 -m pip download keystone-engine --no-deps --no-binary :all: -d /tmp/keystone-src 2>&1
+cd /tmp/keystone-src
+tar xzf keystone-engine-*.tar.gz
+SRC_DIR=$(find . -maxdepth 1 -type d -name "keystone-engine*" | head -1)
+cd "$SRC_DIR"
+sed -i 's/cmake_minimum_required(VERSION [0-9.]*)/cmake_minimum_required(VERSION 3.5)/' CMakeLists.txt
+python3 -m pip install . 2>&1
+cd /workspace
 
 echo "=== Installing PyInstaller ==="
 python3 -m pip install pyinstaller 2>&1
