@@ -42,11 +42,25 @@ jobs:
       - name: Build inside termux-docker
         timeout-minutes: 180
         run: |
-          docker run --rm \
-            --platform ${{ matrix.target.platform }} \
-            -v $PWD:/workspace \
-            termux/termux-docker:${{ matrix.target.arch }} \
-            bash /workspace/build-inside-termux.sh
+          if [ "${{ matrix.target.arch }}" = "arm" ]; then
+            # armv7: proot personality() syscall not supported by QEMU user mode
+            # Bypass proot entrypoint, set env manually, run bash directly
+            docker run --rm \
+              --platform ${{ matrix.target.platform }} \
+              -v $PWD:/workspace \
+              -e PREFIX=/data/data/com.termux/files/usr \
+              -e HOME=/data/data/com.termux/files/usr/home \
+              -e PATH=/data/data/com.termux/files/usr/bin:/system/bin \
+              --entrypoint /data/data/com.termux/files/usr/bin/bash \
+              termux/termux-docker:${{ matrix.target.arch }} \
+              /workspace/build-inside-termux.sh
+          else
+            docker run --rm \
+              --platform ${{ matrix.target.platform }} \
+              -v $PWD:/workspace \
+              termux/termux-docker:${{ matrix.target.arch }} \
+              bash /workspace/build-inside-termux.sh
+          fi
 
       - name: Build .deb package
         shell: bash
