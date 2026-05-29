@@ -141,37 +141,15 @@ jobs:
           dpkg-deb --info "debs/${PKG}_${{ env.PKG_VERSION }}_${ARCH}.deb"
           dpkg-deb --contents "debs/${PKG}_${{ env.PKG_VERSION }}_${ARCH}.deb"
 
-      - name: Organize artifacts
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p upload
-          cp dist/edl "upload/edl-${{ matrix.target.arch }}"
-          cp debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb upload/
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: edl-binary-${{ matrix.target.arch }}
-          path: upload/edl-${{ matrix.target.arch }}
-          if-no-files-found: error
-
-      - name: Upload .deb
-        uses: actions/upload-artifact@v4
-        with:
-          name: edl-deb-${{ matrix.target.arch }}
-          path: upload/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb
-          if-no-files-found: error
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: edl-*
-          merge-multiple: true
-          path: release-assets
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: release-assets/*
-          generate_release_notes: true
+          gh release create ${GITHUB_REF_NAME} \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes 2>/dev/null || true
+          gh release upload ${GITHUB_REF_NAME} \
+            debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb \
+            dist/edl \
+            --clobber
