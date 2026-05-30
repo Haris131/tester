@@ -17,7 +17,7 @@ apt-get update -y 2>&1 || { echo "FAIL: apt-get update"; exit 1; }
 apt-get --fix-broken install -y 2>&1 || true
 
 echo "=== Installing system dependencies ==="
-apt-get install -y libusb python clang binutils make libxml2 libxslt rust cmake file termux-elf-cleaner patchelf 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
+apt-get install -y libusb python clang binutils make libxml2 libxslt rust cmake file termux-elf-cleaner patchelf git 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
 
 echo "=== Installing Python build tools ==="
 python3 -m pip install --upgrade pip wheel setuptools 2>&1
