@@ -72,50 +72,8 @@ jobs:
 
           mkdir -p "$DEB_DIR/DEBIAN"
           mkdir -p "$DEB_DIR/$TP/bin"
-          mkdir -p "$DEB_DIR/$TP/share/termux-edl/Loaders"
 
           install -m 755 "$BINARY" "$DEB_DIR/$TP/bin/edl"
-
-          # postinst
-          {
-            printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash'
-            printf '%s\n' 'set -e'
-            printf '%s\n' 'LOADERS_DIR="/data/data/com.termux/files/usr/share/termux-edl/Loaders"'
-            printf '%s\n' 'if [ ! -f "$LOADERS_DIR/.download_done" ]; then'
-            printf '%s\n' '  echo ""'
-            printf '%s\n' '  echo "=============================================="'
-            printf '%s\n' '  echo " Downloading EDL Loaders..."'
-            printf '%s\n' '  echo "=============================================="'
-            printf '%s\n' '  echo ""'
-            printf '%s\n' '  rm -rf "$LOADERS_DIR"'
-            printf '%s\n' '  if command -v git &>/dev/null; then'
-            printf '%s\n' '    git clone --depth 1 https://github.com/bkerler/Loaders "$LOADERS_DIR"'
-            printf '%s\n' '    rm -rf "$LOADERS_DIR/.git"'
-            printf '%s\n' '    touch "$LOADERS_DIR/.download_done"'
-            printf '%s\n' '    echo ""'
-            printf '%s\n' '    echo " Loaders downloaded successfully."'
-            printf '%s\n' '  else'
-            printf '%s\n' '    echo " WARNING: git not found."'
-            printf '%s\n' '    echo " Install git: pkg install git"'
-            printf '%s\n' '    echo " Then: git clone --depth 1 https://github.com/bkerler/Loaders $LOADERS_DIR"'
-            printf '%s\n' '    mkdir -p "$LOADERS_DIR"'
-            printf '%s\n' '  fi'
-            printf '%s\n' '  echo ""'
-            printf '%s\n' 'fi'
-          } > "$DEB_DIR/DEBIAN/postinst"
-          chmod 755 "$DEB_DIR/DEBIAN/postinst"
-
-          # postrm
-          {
-            printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash'
-            printf '%s\n' 'set -e'
-            printf '%s\n' 'LOADERS_DIR="/data/data/com.termux/files/usr/share/termux-edl/Loaders"'
-            printf '%s\n' 'if [ "$1" = "purge" ] || [ "$1" = "remove" ]; then'
-            printf '%s\n' '  echo "Removing EDL Loaders..."'
-            printf '%s\n' '  rm -rf "$LOADERS_DIR"'
-            printf '%s\n' 'fi'
-          } > "$DEB_DIR/DEBIAN/postrm"
-          chmod 755 "$DEB_DIR/DEBIAN/postrm"
 
           # control
           {
