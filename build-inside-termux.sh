@@ -74,6 +74,10 @@ ADD_BINARY_ARGS=""
 for f in $PYTHON_LIBS; do
   ADD_BINARY_ARGS="$ADD_BINARY_ARGS --add-binary $f:."
 done
+# libusb for pyusb ctypes
+if [ -f "$PREFIX/lib/libusb-1.0.so" ]; then
+  ADD_BINARY_ARGS="$ADD_BINARY_ARGS --add-binary $PREFIX/lib/libusb-1.0.so:."
+fi
 
 pyinstaller --onefile \
   --name edl \
@@ -82,8 +86,8 @@ pyinstaller --onefile \
   --specpath /workspace \
   $ADD_BINARY_ARGS \
   --add-data "$PREFIX/share/termux-edl/Loaders:Loaders" \
-  --hidden-import pyusb \
-  --hidden-import pyserial \
+  --hidden-import usb \
+  --hidden-import serial \
   --hidden-import docopt \
   --hidden-import Cryptodome \
   --hidden-import Cryptodome.Math \
