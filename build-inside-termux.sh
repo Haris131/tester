@@ -83,7 +83,7 @@ pyinstaller --onefile \
   --name edl \
   --distpath /workspace/dist \
   --workpath /workspace/build \
-  --specpath /workspace \
+  --specpath /workspace/build \
   $ADD_BINARY_ARGS \
   --add-data "$PREFIX/share/termux-edl/Loaders:Loaders" \
   --hidden-import usb \
