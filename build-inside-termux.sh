@@ -17,7 +17,7 @@ apt-get update -y 2>&1 || { echo "FAIL: apt-get update"; exit 1; }
 apt-get --fix-broken install -y 2>&1 || true
 
 echo "=== Installing system dependencies ==="
-apt-get install -y libusb python clang binutils make libxml2 libxslt rust cmake file termux-elf-cleaner 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
+apt-get install -y libusb python clang binutils make libxml2 libxslt rust cmake file termux-elf-cleaner patchelf 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
 
 echo "=== Installing Python build tools ==="
 python3 -m pip install --upgrade pip wheel setuptools 2>&1
@@ -28,6 +28,15 @@ python3 -m pip install pyusb pyserial docopt pycryptodome pycryptodomex colorama
             passlib lxml 2>&1
 
 export TMPDIR="$PREFIX/tmp"
+
+# Create ldd wrapper if missing (not provided by binutils on Termux)
+if ! command -v ldd &>/dev/null; then
+  cat > "$PREFIX/bin/ldd" << 'LDDEOF'
+#!/data/data/com.termux/files/usr/bin/bash
+termux-elf-cleaner --show-info "$@"
+LDDEOF
+  chmod +x "$PREFIX/bin/ldd"
+fi
 
 # keystone-engine needs a CMakeLists.txt patch for cmake >= 4.x
 echo "=== Installing keystone-engine (patched for cmake 4.x) ==="
