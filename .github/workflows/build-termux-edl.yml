@@ -86,7 +86,7 @@ jobs:
             printf '%s\n' "Description: Qualcomm EDL tool (Sahara/Firehose) for Termux without root permissions"
             printf '%s\n' " Static binary. Supports Sahara V3 protocol,"
             printf '%s\n' " firehose flashing, memory dumping, and diag."
-            printf '%s\n' "Depends: termux-api, libusb, git"
+            printf '%s\n' "Depends: termux-api, libusb"
             printf '%s\n' "Homepage: https://github.com/Haris131/termux-edl"
           } > "$DEB_DIR/DEBIAN/control"
 
