@@ -101,13 +101,13 @@ jobs:
           dpkg-deb --contents "debs/${PKG}_${{ env.PKG_VERSION }}_${ARCH}.deb"
 
       - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: v${{ env.PKG_VERSION }}-build${{ github.run_number }}
+          name: "Termux EDL v${{ env.PKG_VERSION }} (build ${{ github.run_number }})"
           generate_release_notes: true
           fail_on_unmatched_files: true
+          replaces_assets: false
           files: |
             debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb
             dist/edl
