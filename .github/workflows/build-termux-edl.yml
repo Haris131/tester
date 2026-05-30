@@ -6,6 +6,9 @@ on:
     branches: [ termux-edl ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   PKG_VERSION: "3.62"
 
@@ -99,13 +102,12 @@ jobs:
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create ${GITHUB_REF_NAME} \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes 2>/dev/null || true
-          gh release upload ${GITHUB_REF_NAME} \
-            debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb \
-            dist/edl \
-            --clobber
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb
+            dist/edl
