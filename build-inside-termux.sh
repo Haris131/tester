@@ -25,7 +25,8 @@ python3 -m pip install --upgrade pip wheel setuptools 2>&1
 echo "=== Installing edl Python dependencies ==="
 python3 -m pip install pyusb pyserial docopt pycryptodome pycryptodomex colorama \
             capstone qrcode requests \
-            passlib lxml Exscript 2>&1
+            passlib lxml 2>&1
+python3 -m pip install Exscript --no-deps 2>&1
 
 export TMPDIR="$PREFIX/tmp"
 
