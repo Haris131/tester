@@ -58,8 +58,11 @@ mkdir -p "$TMPDIR/build-edl"
 cp -a /workspace/edl-src/. "$TMPDIR/build-edl/"
 cd "$TMPDIR/build-edl"
 
-echo "=== Patching loader_db.py ==="
-python3 /workspace/patch-loader.py 2>&1
+echo "=== Installing Loaders to share directory ==="
+mkdir -p "$PREFIX/share/termux-edl/Loaders"
+if [ -d "Loaders" ] && [ "$(ls -A Loaders)" ]; then
+  cp -a Loaders/. "$PREFIX/share/termux-edl/Loaders/"
+fi
 
 python3 -m pip install --no-deps . 2>&1
 
@@ -78,6 +81,7 @@ pyinstaller --onefile \
   --workpath /workspace/build \
   --specpath /workspace \
   $ADD_BINARY_ARGS \
+  --add-data "$PREFIX/share/termux-edl/Loaders:Loaders" \
   --hidden-import pyusb \
   --hidden-import pyserial \
   --hidden-import docopt \
