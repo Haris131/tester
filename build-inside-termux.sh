@@ -20,7 +20,7 @@ echo "=== Installing system dependencies ==="
 apt-get install -y libusb python clang binutils make libxml2 libxslt rust cmake file termux-elf-cleaner patchelf git ccache 2>&1 || { echo "FAIL: apt-get install"; exit 1; }
 
 echo "=== Setting up ccache ==="
-export CCACHE_DIR="$TMPDIR/ccache"
+export CCACHE_DIR="${CCACHE_DIR:-$TMPDIR/ccache}"
 export PATH="/usr/lib/ccache:$PATH"
 ccache --max-size 1G 2>&1 || true
 mkdir -p "$CCACHE_DIR"

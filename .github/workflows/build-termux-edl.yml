@@ -41,10 +41,18 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ccache
+          key: ccache-${{ matrix.target.arch }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.target.arch }}-
+
       - name: Prepare workspace for non-root build
         run: |
-          mkdir -p dist build
-          chmod 777 dist build
+          mkdir -p dist build ccache
+          chmod 777 dist build ccache
           chmod +x build-inside-termux.sh
           chmod -R a+rX .
 
@@ -56,6 +64,7 @@ jobs:
           # works correctly for both aarch64 and arm.
           docker run --privileged --rm \
             -v $PWD:/workspace \
+            -e CCACHE_DIR=/workspace/ccache \
             termux/termux-docker:${{ matrix.target.arch }} \
             bash /workspace/build-inside-termux.sh
 
