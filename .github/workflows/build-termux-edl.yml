@@ -20,10 +20,8 @@ jobs:
         target:
           - arch: aarch64
             platform: linux/arm64
-            deb_arch: arm64
           - arch: arm
             platform: linux/arm/v7
-            deb_arch: armhf
       fail-fast: false
 
     steps:
@@ -78,7 +76,7 @@ jobs:
           fi
 
           PKG="termux-edl"
-          ARCH="${{ matrix.target.deb_arch }}"
+          ARCH="${{ matrix.target.arch }}"
           DEB_DIR="${PKG}_${{ env.PKG_VERSION }}_${ARCH}"
           TP="data/data/com.termux/files/usr"
 
@@ -119,4 +117,3 @@ jobs:
           replaces_assets: false
           files: |
             debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb
-            dist/edl
