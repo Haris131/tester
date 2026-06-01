@@ -204,6 +204,11 @@ done
 if [ -f "$PREFIX/lib/libusb-1.0.so" ]; then
   ADD_BINARY_ARGS="$ADD_BINARY_ARGS --add-binary $PREFIX/lib/libusb-1.0.so:."
 fi
+# keystone native library (bundled in keystone/ subdir for ctypes loading)
+KEYSTONE_LIBS=$(find "$PREFIX/lib/python3.13/site-packages/keystone" -name "*.so" -o -name "*.so.*" 2>/dev/null || true)
+for f in $KEYSTONE_LIBS; do
+  ADD_BINARY_ARGS="$ADD_BINARY_ARGS --add-binary $f:keystone"
+done
 
 pyinstaller --onefile \
   --name edl \
