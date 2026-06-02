@@ -116,4 +116,4 @@ jobs:
           fail_on_unmatched_files: true
           replaces_assets: false
           files: |
-            debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.deb_arch }}.deb
+            debs/termux-edl_${{ env.PKG_VERSION }}_${{ matrix.target.arch }}.deb
