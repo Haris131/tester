@@ -21,4 +21,4 @@ On every push to `termux-edl` branch, the workflow:
 ## Artifacts
 
 - `dist/edl` — standalone static binary
-- `debs/termux-edl_3.62_<arch>.deb` — Termux `.deb` package (depends: `termux-api, libusb`)
+- `debs/termux-edl_3.62_<arch>.deb` — Termux `.deb` package (depends: `termux-api`)
