@@ -177,18 +177,6 @@ jobs:
           make -j$(nproc) tun2socks
           find . -name "tun2socks" -type f -exec $STRIP {} \; -exec cp {} $GITHUB_WORKSPACE/artifacts/ \;
 
-      - name: Build tun2socks-udprelay (FH0/badvpn fork)
-        run: |
-          git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
-          cd badvpn-udprelay
-          mkdir -p jni
-          sed 's|LOCAL_PATH := \$(call my-dir)|LOCAL_PATH := $(call my-dir)/..|' Android.mk > jni/Android.mk
-          cp Application.mk jni/
-          $NDK_ROOT/ndk-build NDK_PROJECT_PATH=. \
-            APP_ABI=${{ matrix.abi }} \
-            APP_PLATFORM=android-${{ matrix.api }}
-          find obj -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
-
       - name: Build corkscrew
         run: |
           wget -q https://deb.debian.org/debian/pool/main/c/corkscrew/corkscrew_2.0.orig.tar.gz -O corkscrew-2.0.tar.gz 2>&1 || \
@@ -278,6 +266,19 @@ jobs:
           make -j$(nproc)
           $STRIP src/stunnel
           cp src/stunnel $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build tun2socks-udprelay (FH0/badvpn fork)
+        continue-on-error: true
+        run: |
+          git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
+          cd badvpn-udprelay
+          mkdir -p jni
+          sed 's|LOCAL_PATH := \$(call my-dir)|LOCAL_PATH := $(call my-dir)/..|' Android.mk > jni/Android.mk
+          cp Application.mk jni/
+          $NDK_ROOT/ndk-build NDK_PROJECT_PATH=. \
+            APP_ABI=${{ matrix.abi }} \
+            APP_PLATFORM=android-${{ matrix.api }}
+          find obj -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
 
       - name: Package
         run: |
