@@ -200,43 +200,46 @@ jobs:
           curl -fSL -o openssh-${{ env.SSH_VERSION }}.tar.gz \
             https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
-          cd openssh-${{ env.SSH_VERSION }}
-          export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
-          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
-          export LIBS="-ldl"
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" \
-            CFLAGS="$CFLAGS" \
-            LDFLAGS="$LDFLAGS" \
-            LIBS="$LIBS" \
-            --with-zlib="$DEPS_DIR/zlib" \
-            --with-ssl-dir="$DEPS_DIR/openssl" \
-            --disable-strip \
-            --disable-etc-default-login \
-            --disable-lastlog \
-            --disable-utmp \
-            --disable-utmpx \
-            --disable-wtmp \
-            --disable-wtmpx \
-            --disable-pututline \
-            --disable-pututxline \
-            --disable-pkcs11 \
-            ac_cv_func_getaddrinfo=yes \
-            ac_cv_have_int64_t=yes \
-            ac_cv_have_u_int64_t=yes \
-            ac_cv_have_uint64_t=yes \
-            ac_cv_func_getpwnam_r=yes \
-            ac_cv_func_getpwuid_r=yes \
-            ac_cv_func_getgrgid_r=yes \
-            ac_cv_func_getgrnam_r=yes \
-            ac_cv_func_clock_gettime=yes \
-            ac_cv_func_mmap=yes \
-            ac_cv_func_strnlen=yes \
-            ac_cv_func_va_copy=yes \
-            ac_cv_func_malloc_0_nonnull=yes \
-            ac_cv_func_realloc_0_nonnull=yes \
-            ac_cv_func_mblen=yes \
-            ac_cv_func_closefrom=yes
+           cd openssh-${{ env.SSH_VERSION }}
+           export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
+           export LIBS="-ldl"
+           CC="$CC" \
+           CFLAGS="$CFLAGS" \
+           LDFLAGS="$LDFLAGS" \
+           LIBS="$LIBS" \
+           ac_cv_func_getaddrinfo=yes \
+           ac_cv_have_int64_t=yes \
+           ac_cv_have_u_int64_t=yes \
+           ac_cv_have_uint64_t=yes \
+           ac_cv_func_getpwnam_r=yes \
+           ac_cv_func_getpwuid_r=yes \
+           ac_cv_func_getgrgid_r=yes \
+           ac_cv_func_getgrnam_r=yes \
+           ac_cv_func_clock_gettime=yes \
+           ac_cv_func_mmap=yes \
+           ac_cv_func_strnlen=yes \
+           ac_cv_func_va_copy=yes \
+           ac_cv_func_malloc_0_nonnull=yes \
+           ac_cv_func_realloc_0_nonnull=yes \
+           ac_cv_func_mblen=yes \
+           ac_cv_func_closefrom=yes \
+           ac_cv_func_getpagesize=yes \
+           ac_cv_c___attribute__=yes \
+           ac_cv_func_bzero=yes \
+           ./configure --host=${{ matrix.host }} \
+             --with-zlib="$DEPS_DIR/zlib" \
+             --with-ssl-dir="$DEPS_DIR/openssl" \
+             --disable-strip \
+             --disable-etc-default-login \
+             --disable-lastlog \
+             --disable-utmp \
+             --disable-utmpx \
+             --disable-wtmp \
+             --disable-wtmpx \
+             --disable-pututline \
+             --disable-pututxline \
+             --disable-pkcs11
           make -j$(nproc) ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
           for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
             [ -f "$f" ] && $STRIP "$f" && cp "$f" $GITHUB_WORKSPACE/artifacts/
