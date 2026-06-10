@@ -16,7 +16,9 @@ Cross-compiled networking tools for Android via GitHub Actions.
 
 | API (Android) | Arch | OpenSSL |
 |---------------|------|---------|
-| 24 (7.0) | armv7a, aarch64 | 1.1.1w |
+| 19 (4.4) | armv7a | 1.1.1w |
+| 21 (5.0) | armv7a, aarch64 | 1.1.1w |
+| 24 (7.0) | armv7a, aarch64 | 3.6.3 |
 
 ## Usage
 

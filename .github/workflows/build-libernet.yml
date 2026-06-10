@@ -7,7 +7,6 @@ on:
 
 env:
   NDK_VERSION: r23b
-  OPENSSL_VERSION: 1.1.1w
   ZLIB_VERSION: 1.3.1
   SSH_VERSION: 9.9p1
   BADVPN_VERSION: 1.999.130
@@ -21,15 +20,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - api: 19
+            abi: armeabi-v7a
+            cc_target: armv7a-linux-androideabi19
+            openssl_target: linux-armv4
+            openssl_version: 1.1.1w
+            host: arm-linux-androideabi
+          - api: 21
+            abi: armeabi-v7a
+            cc_target: armv7a-linux-androideabi21
+            openssl_target: linux-armv4
+            openssl_version: 1.1.1w
+            host: arm-linux-androideabi
+          - api: 21
+            abi: arm64-v8a
+            cc_target: aarch64-linux-android21
+            openssl_target: linux-aarch64
+            openssl_version: 1.1.1w
+            host: aarch64-linux-android
           - api: 24
             abi: armeabi-v7a
             cc_target: armv7a-linux-androideabi24
             openssl_target: linux-armv4
+            openssl_version: 3.6.3
             host: arm-linux-androideabi
           - api: 24
             abi: arm64-v8a
             cc_target: aarch64-linux-android24
             openssl_target: linux-aarch64
+            openssl_version: 3.6.3
             host: aarch64-linux-android
 
     steps:
@@ -83,7 +102,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deps/${{ matrix.cc_target }}
-          key: ${{ env.CACHE_PREFIX }}-deps-${{ env.OPENSSL_VERSION }}-${{ matrix.cc_target }}
+          key: ${{ env.CACHE_PREFIX }}-deps-${{ matrix.openssl_version }}-${{ matrix.cc_target }}
 
       - name: Build zlib
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -99,19 +118,23 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Build OpenSSL
+      - name: Build OpenSSL ${{ matrix.openssl_version }}
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
-          wget -q https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
-          tar xzf openssl-${{ env.OPENSSL_VERSION }}.tar.gz
-          cd openssl-${{ env.OPENSSL_VERSION }}
+          wget -q https://www.openssl.org/source/openssl-${{ matrix.openssl_version }}.tar.gz
+          tar xzf openssl-${{ matrix.openssl_version }}.tar.gz
+          cd openssl-${{ matrix.openssl_version }}
           export PATH="$NDK_BIN:$PATH"
           export CC="$CC"
           export AR="$AR"
           export RANLIB="$RANLIB"
+          OPENSSL_OPTS="no-shared no-asm no-engine"
+          if [ "${{ matrix.openssl_version }}" = "1.1.1w" ]; then
+            OPENSSL_OPTS="$OPENSSL_OPTS no-hw"
+          fi
           ./Configure ${{ matrix.openssl_target }} \
             --prefix="$DEPS_DIR/openssl" \
-            no-shared no-asm no-hw no-engine \
+            $OPENSSL_OPTS \
             -D__ANDROID_API__=${{ matrix.api }} \
             -DOPENSSL_NO_SECURE_MEMORY
           make -j$(nproc)
