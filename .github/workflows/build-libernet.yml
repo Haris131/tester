@@ -167,6 +167,7 @@ jobs:
             -DANDROID_ABI=${{ matrix.abi }} \
             -DANDROID_PLATFORM=android-${{ matrix.api }} \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_DISABLE_FIND_PACKAGE_NSPR=ON \
             -DBUILD_TUN2SOCKS=ON \
             -DBUILD_CLIENT=OFF \
             -DBUILD_SERVER=OFF \
