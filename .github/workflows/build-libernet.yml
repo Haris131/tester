@@ -177,6 +177,17 @@ jobs:
           make -j$(nproc) tun2socks
           find . -name "tun2socks" -type f -exec $STRIP {} \; -exec cp {} $GITHUB_WORKSPACE/artifacts/ \;
 
+      - name: Build tun2socks-udprelay (FH0/badvpn fork)
+        run: |
+          git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
+          cd badvpn-udprelay
+          NDK_PROJECT_PATH=. $NDK_ROOT/ndk-build \
+            NDK_APPLICATION_MK=./Application.mk \
+            APP_BUILD_SCRIPT=./Android.mk \
+            APP_ABI=${{ matrix.abi }} \
+            APP_PLATFORM=android-${{ matrix.api }}
+          find . -name "tun2socks" -type f -exec $STRIP {} \; -exec cp {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
+
       - name: Build corkscrew
         run: |
           wget -q https://deb.debian.org/debian/pool/main/c/corkscrew/corkscrew_2.0.orig.tar.gz -O corkscrew-2.0.tar.gz 2>&1 || \
@@ -200,19 +211,22 @@ jobs:
           curl -fSL -o openssh-${{ env.SSH_VERSION }}.tar.gz \
             https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
-           cd openssh-${{ env.SSH_VERSION }}
+            cd openssh-${{ env.SSH_VERSION }}
            # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
-           cat > openbsd-compat/getrrsetbyname.c << 'GETRRSETSTUB'
-#include "includes.h"
+           python3 -c "
+content = '''#include \"includes.h\"
 #if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)
-#include "getrrsetbyname.h"
+#include \"getrrsetbyname.h\"
 int getrrsetbyname(const char *hostname, unsigned int rdclass,
     unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) {
-	return ERRSET_FAIL;
+    return ERRSET_FAIL;
 }
 void freerrset(struct rrsetinfo *rrset) { /* no-op */ }
 #endif
-GETRRSETSTUB
+'''
+with open('openbsd-compat/getrrsetbyname.c', 'w') as f:
+    f.write(content)
+"
            export CFLAGS="$CFLAGS -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
