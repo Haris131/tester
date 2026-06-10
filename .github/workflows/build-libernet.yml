@@ -107,7 +107,7 @@ jobs:
       - name: Build zlib
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
-          wget -q https://zlib.net/fossils/zlib-${{ env.ZLIB_VERSION }}.tar.gz
+          wget -q https://zlib.net/zlib-${{ env.ZLIB_VERSION }}.tar.gz
           tar xzf zlib-${{ env.ZLIB_VERSION }}.tar.gz
           cd zlib-${{ env.ZLIB_VERSION }}
           CHOST=${{ matrix.host }} \
