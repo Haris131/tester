@@ -156,6 +156,11 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/artifacts
           cp sshpass $GITHUB_WORKSPACE/artifacts/
 
+      - name: Install NSS/NSPR headers (needed by badvpn cmake)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libnspr4-dev libnss3-dev
+
       - name: Build badvpn-tun2socks
         run: |
           wget -q https://github.com/ambrop72/badvpn/archive/refs/tags/${{ env.BADVPN_VERSION }}.tar.gz -O badvpn.tar.gz
@@ -167,16 +172,8 @@ jobs:
             -DANDROID_ABI=${{ matrix.abi }} \
             -DANDROID_PLATFORM=android-${{ matrix.api }} \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_DISABLE_FIND_PACKAGE_NSPR=ON \
-            -DCMAKE_DISABLE_FIND_PACKAGE_NSS=ON \
-            -DBUILD_TUN2SOCKS=ON \
-            -DBUILD_CLIENT=OFF \
-            -DBUILD_SERVER=OFF \
-            -DBUILD_UDPGW=OFF \
-            -DBUILD_NATPMPC=OFF \
-            -DBUILD_SOCKS_CLIENT=OFF \
-            -DBUILD_DHCPCLIENT=OFF \
-            -DBUILD_DHCPSERVER=OFF
+            -DBUILD_NOTHING_BY_DEFAULT=1 \
+            -DBUILD_TUN2SOCKS=1
           make -j$(nproc) tun2socks
           $STRIP tun2socks
           cp tun2socks $GITHUB_WORKSPACE/artifacts/
