@@ -193,7 +193,9 @@ jobs:
 
       - name: Build OpenSSH client
         run: |
-          wget -q https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
+          wget -q https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz || \
+          wget -q https://cloudflare.cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz || \
+          wget -q https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
           cd openssh-${{ env.SSH_VERSION }}
           export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
