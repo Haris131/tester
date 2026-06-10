@@ -179,7 +179,7 @@ jobs:
 
       - name: Build corkscrew
         run: |
-          wget -q http://corkscrew.agroman.net/corkscrew-2.0.tar.gz
+          wget -q https://github.com/bryanpkc/corkscrew/archive/refs/tags/2.0.tar.gz -O corkscrew-2.0.tar.gz || wget -q http://corkscrew.agroman.net/corkscrew-2.0.tar.gz
           tar xzf corkscrew-2.0.tar.gz
           cd corkscrew-2.0
           ./configure --host=${{ matrix.host }} \
