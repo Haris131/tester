@@ -1,0 +1,240 @@
+name: Build Libernet for Android
+
+on:
+  push:
+    branches: [ libernet-android ]
+  workflow_dispatch:
+
+env:
+  NDK_VERSION: r23b
+  OPENSSL_VERSION: 1.1.1w
+  ZLIB_VERSION: 1.3.1
+  SSH_VERSION: 9.9p1
+  BADVPN_VERSION: 1.999.130
+  STUNNEL_VERSION: 5.74
+  CACHE_PREFIX: v1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 24
+            abi: armeabi-v7a
+            cc_target: armv7a-linux-androideabi24
+            openssl_target: linux-armv4
+            host: arm-linux-androideabi
+          - api: 24
+            abi: arm64-v8a
+            cc_target: aarch64-linux-android24
+            openssl_target: linux-aarch64
+            host: aarch64-linux-android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: false
+          local-cache: true
+
+      - name: Fix NDK symlinks
+        run: |
+          NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}
+          NDK_BIN=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin
+          for f in "$NDK_BIN"/*; do
+            if [ -L "$f" ] && [ ! -e "$f" ]; then
+              target=$(readlink "$f")
+              base=$(basename "$target")
+              if [ -n "$base" ]; then
+                real=$(find "$NDK_ROOT" -name "$base" -type f 2>/dev/null | head -1)
+                if [ -n "$real" ]; then
+                  rm -f "$f" && ln -sf "$real" "$f"
+                elif [ -x "$NDK_BIN/$base" ]; then
+                  rm -f "$f" && ln -sf "$NDK_BIN/$base" "$f"
+                fi
+              fi
+            fi
+          done
+          ln -sf ${{ matrix.cc_target }}-clang "$NDK_BIN/${{ matrix.host }}-clang" 2>/dev/null || true
+          ln -sf ${{ matrix.cc_target }}-clang++ "$NDK_BIN/${{ matrix.host }}-clang++" 2>/dev/null || true
+
+      - name: Export toolchain
+        run: |
+          NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}
+          NDK_BIN=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin
+          echo "NDK_BIN=$NDK_BIN" >> $GITHUB_ENV
+          echo "NDK_ROOT=$NDK_ROOT" >> $GITHUB_ENV
+          echo "CC=$NDK_BIN/${{ matrix.cc_target }}-clang" >> $GITHUB_ENV
+          echo "AR=$NDK_BIN/llvm-ar" >> $GITHUB_ENV
+          echo "RANLIB=$NDK_BIN/llvm-ranlib" >> $GITHUB_ENV
+          echo "STRIP=$NDK_BIN/llvm-strip" >> $GITHUB_ENV
+          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -fPIE -fPIC" >> $GITHUB_ENV
+          echo "LDFLAGS=-fPIE -pie" >> $GITHUB_ENV
+          echo "DEPS_DIR=$GITHUB_WORKSPACE/deps/${{ matrix.cc_target }}" >> $GITHUB_ENV
+
+      - name: Cache deps
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: deps/${{ matrix.cc_target }}
+          key: ${{ env.CACHE_PREFIX }}-deps-${{ env.OPENSSL_VERSION }}-${{ matrix.cc_target }}
+
+      - name: Build zlib
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          wget -q https://zlib.net/fossils/zlib-${{ env.ZLIB_VERSION }}.tar.gz
+          tar xzf zlib-${{ env.ZLIB_VERSION }}.tar.gz
+          cd zlib-${{ env.ZLIB_VERSION }}
+          CHOST=${{ matrix.host }} \
+          CC="$CC" \
+          AR="$AR" \
+          RANLIB="$RANLIB" \
+          ./configure --prefix="$DEPS_DIR/zlib" --static
+          make -j$(nproc)
+          make install
+
+      - name: Build OpenSSL
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          wget -q https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
+          tar xzf openssl-${{ env.OPENSSL_VERSION }}.tar.gz
+          cd openssl-${{ env.OPENSSL_VERSION }}
+          export PATH="$NDK_BIN:$PATH"
+          export CC="$CC"
+          export AR="$AR"
+          export RANLIB="$RANLIB"
+          ./Configure ${{ matrix.openssl_target }} \
+            --prefix="$DEPS_DIR/openssl" \
+            no-shared no-asm no-hw no-engine \
+            -D__ANDROID_API__=${{ matrix.api }} \
+            -DOPENSSL_NO_SECURE_MEMORY
+          make -j$(nproc)
+          make install_sw
+
+      - name: Build sshpass
+        run: |
+          wget -q https://sourceforge.net/projects/sshpass/files/sshpass/1.10/sshpass-1.10.tar.gz
+          tar xzf sshpass-1.10.tar.gz
+          cd sshpass-1.10
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" \
+            CFLAGS="$CFLAGS" \
+            LDFLAGS="$LDFLAGS"
+          make -j$(nproc)
+          $STRIP sshpass
+          mkdir -p $GITHUB_WORKSPACE/artifacts
+          cp sshpass $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build badvpn-tun2socks
+        run: |
+          wget -q https://github.com/ambrop72/badvpn/archive/refs/tags/${{ env.BADVPN_VERSION }}.tar.gz -O badvpn.tar.gz
+          tar xzf badvpn.tar.gz
+          cd badvpn-${{ env.BADVPN_VERSION }}
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DANDROID_PLATFORM=android-${{ matrix.api }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TUN2SOCKS=ON \
+            -DBUILD_CLIENT=OFF \
+            -DBUILD_SERVER=OFF \
+            -DBUILD_UDPGW=OFF \
+            -DBUILD_NATPMPC=OFF \
+            -DBUILD_SOCKS_CLIENT=OFF \
+            -DBUILD_DHCPCLIENT=OFF \
+            -DBUILD_DHCPSERVER=OFF
+          make -j$(nproc) tun2socks
+          $STRIP tun2socks
+          cp tun2socks $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build corkscrew
+        run: |
+          wget -q http://corkscrew.agroman.net/corkscrew-2.0.tar.gz
+          tar xzf corkscrew-2.0.tar.gz
+          cd corkscrew-2.0
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" \
+            CFLAGS="$CFLAGS" \
+            LDFLAGS="$LDFLAGS"
+          make -j$(nproc)
+          $STRIP corkscrew
+          cp corkscrew $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build OpenSSH client
+        run: |
+          wget -q https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
+          tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
+          cd openssh-${{ env.SSH_VERSION }}
+          export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
+          export LIBS="-ldl"
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" \
+            CFLAGS="$CFLAGS" \
+            LDFLAGS="$LDFLAGS" \
+            LIBS="$LIBS" \
+            --with-zlib="$DEPS_DIR/zlib" \
+            --with-ssl-dir="$DEPS_DIR/openssl" \
+            --disable-strip \
+            --disable-etc-default-login \
+            --disable-lastlog \
+            --disable-utmp \
+            --disable-utmpx \
+            --disable-wtmp \
+            --disable-wtmpx \
+            --disable-pututline \
+            --disable-pututxline \
+            --disable-pkcs11 \
+            ac_cv_func_getaddrinfo=yes \
+            ac_cv_have_int64_t=yes \
+            ac_cv_have_u_int64_t=yes \
+            ac_cv_have_uint64_t=yes \
+            ac_cv_func_getpwnam_r=yes \
+            ac_cv_func_getpwuid_r=yes \
+            ac_cv_func_getgrgid_r=yes \
+            ac_cv_func_getgrnam_r=yes \
+            ac_cv_func_clock_gettime=yes \
+            ac_cv_func_mmap=yes \
+            ac_cv_func_strnlen=yes \
+            ac_cv_func_va_copy=yes
+          make -j$(nproc) ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
+          for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
+            [ -f "$f" ] && $STRIP "$f" && cp "$f" $GITHUB_WORKSPACE/artifacts/
+          done
+
+      - name: Build stunnel
+        run: |
+          wget -q https://www.stunnel.org/downloads/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
+          tar xzf stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
+          cd stunnel-${{ env.STUNNEL_VERSION }}
+          export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include"
+          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -ldl"
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" \
+            CFLAGS="$CFLAGS" \
+            LDFLAGS="$LDFLAGS" \
+            --with-ssl="$DEPS_DIR/openssl" \
+            --disable-systemd \
+            --disable-fips
+          make -j$(nproc)
+          $STRIP src/stunnel
+          cp src/stunnel $GITHUB_WORKSPACE/artifacts/
+
+      - name: Package
+        run: |
+          cd $GITHUB_WORKSPACE/artifacts
+          ls -lh
+          tar czf $GITHUB_WORKSPACE/libernet-tools-${{ matrix.cc_target }}.tar.gz *
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: libernet-tools-${{ matrix.cc_target }}
+          path: libernet-tools-${{ matrix.cc_target }}.tar.gz
