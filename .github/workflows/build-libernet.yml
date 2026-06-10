@@ -181,12 +181,12 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
           cd badvpn-udprelay
-          NDK_PROJECT_PATH=. $NDK_ROOT/ndk-build \
-            NDK_APPLICATION_MK=./Application.mk \
-            APP_BUILD_SCRIPT=./Android.mk \
+          mkdir -p jni
+          cp Android.mk Application.mk jni/
+          $NDK_ROOT/ndk-build NDK_PROJECT_PATH=. \
             APP_ABI=${{ matrix.abi }} \
             APP_PLATFORM=android-${{ matrix.api }}
-          find . -name "tun2socks" -type f -exec $STRIP {} \; -exec cp {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
+          find . -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
 
       - name: Build corkscrew
         run: |
@@ -213,20 +213,7 @@ jobs:
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
             cd openssh-${{ env.SSH_VERSION }}
            # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
-           python3 -c "
-content = '''#include \"includes.h\"
-#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)
-#include \"getrrsetbyname.h\"
-int getrrsetbyname(const char *hostname, unsigned int rdclass,
-    unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) {
-    return ERRSET_FAIL;
-}
-void freerrset(struct rrsetinfo *rrset) { /* no-op */ }
-#endif
-'''
-with open('openbsd-compat/getrrsetbyname.c', 'w') as f:
-    f.write(content)
-"
+           printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
            export CFLAGS="$CFLAGS -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
