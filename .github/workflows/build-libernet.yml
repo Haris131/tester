@@ -201,7 +201,7 @@ jobs:
             https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
            cd openssh-${{ env.SSH_VERSION }}
-           export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+           export CFLAGS="$CFLAGS -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
            CC="$CC" \
