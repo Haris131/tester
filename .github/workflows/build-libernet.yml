@@ -182,11 +182,12 @@ jobs:
           git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
           cd badvpn-udprelay
           mkdir -p jni
-          cp Android.mk Application.mk jni/
+          sed 's|LOCAL_PATH := \$(call my-dir)|LOCAL_PATH := $(call my-dir)/..|' Android.mk > jni/Android.mk
+          cp Application.mk jni/
           $NDK_ROOT/ndk-build NDK_PROJECT_PATH=. \
             APP_ABI=${{ matrix.abi }} \
             APP_PLATFORM=android-${{ matrix.api }}
-          find . -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
+          find obj -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
 
       - name: Build corkscrew
         run: |
