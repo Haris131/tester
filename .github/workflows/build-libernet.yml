@@ -185,9 +185,8 @@ jobs:
           tar xzf corkscrew-2.0.tar.gz
           cd corkscrew-2.0
           CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-          ./configure --host=${{ matrix.host }} \
-            ac_cv_func_malloc_0_nonnull=yes \
-            ac_cv_func_realloc_0_nonnull=yes
+          ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes \
+          ./configure --host=${{ matrix.host }}
           make -j$(nproc)
           $STRIP corkscrew
           cp corkscrew $GITHUB_WORKSPACE/artifacts/
