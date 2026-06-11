@@ -258,7 +258,7 @@ jobs:
           printf '%s\n' '#pragma once' '#define HAVE_SSL 1' '#define HAVE_OPENSSL 1' > config.h
           printf '%s\n' '#include <stdio.h>' '#define gettext(s) (s)' '#define dgettext(d,s) (s)' '#define bindtextdomain(d,p) ((void)0)' '#define textdomain(d) ((void)0)' > libintl.h
           make CC="$CC" \
-            CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include" \
+            CFLAGS="$CFLAGS -I. -I$DEPS_DIR/openssl/include" \
             LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib" \
             LIBS="-lssl -lcrypto -lz -ldl" \
             -j$(nproc)
