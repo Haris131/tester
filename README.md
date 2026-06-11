@@ -18,17 +18,22 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy |
 | [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling |
 | [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) |
-| [php8](https://www.php.net/) | PHP CLI (experimental) |
-| [python3](https://www.python.org/) | Python 3 interpreter (experimental) |
+| [php8](https://www.php.net/) | PHP CLI + CGI (sockets, pcntl, session, openssl, zlib, JSON) |
 | [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay |
 
 ## Build Matrix
 
-| API (Android) | Arch | OpenSSL |
-|---------------|------|---------|
-| 19 (4.4) | armv7a | 1.1.1w |
-| 21 (5.0) | armv7a, aarch64 | 1.1.1w |
-| 24 (7.0) | armv7a, aarch64 | 3.6.3 |
+5 configurations across the matrix:
+
+| Config | API | Arch | OpenSSL |
+|--------|-----|------|---------|
+| 1 | 19 (4.4) | armeabi-v7a | 1.1.1w |
+| 2 | 21 (5.0) | armeabi-v7a | 1.1.1w |
+| 3 | 21 (5.0) | arm64-v8a | 1.1.1w |
+| 4 | 24 (7.0) | armeabi-v7a | 3.6.3 |
+| 5 | 24 (7.0) | arm64-v8a | 3.6.3 |
+
+All 5 configs build successfully with no `continue-on-error` on any step.
 
 ## Usage
 
