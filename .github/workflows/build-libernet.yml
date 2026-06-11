@@ -179,9 +179,8 @@ jobs:
 
       - name: Build badvpn-tun2socks
         run: |
-          wget -q https://github.com/ambrop72/badvpn/archive/refs/tags/${{ env.BADVPN_VERSION }}.tar.gz -O badvpn.tar.gz
-          tar xzf badvpn.tar.gz
-          cd badvpn-${{ env.BADVPN_VERSION }}
+          git clone --depth=1 https://github.com/FH0/badvpn.git
+          cd badvpn
           mkdir build && cd build
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake \
