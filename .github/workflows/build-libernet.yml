@@ -13,6 +13,12 @@ env:
   STUNNEL_VERSION: 5.78
   GETDNS_VERSION: v1.7.3
   YAML_VERSION: 0.2.5
+  JQ_VERSION: 1.8.1
+  CURL_VERSION: 7.88.1
+  HTTPING_VERSION: 3.5
+  BASH_VERSION: 5.2.37
+  PHP_VERSION: 8.3.8
+  PYTHON_VERSION: 3.12.4
   CACHE_PREFIX: v1
 
 jobs:
@@ -213,10 +219,9 @@ jobs:
 
       - name: Build jq
         run: |
-          JQ_VER=1.8.1
-          wget -q https://github.com/jqlang/jq/releases/download/jq-${JQ_VER}/jq-${JQ_VER}.tar.gz
-          tar xzf jq-${JQ_VER}.tar.gz
-          cd jq-${JQ_VER}
+          wget -q https://github.com/jqlang/jq/releases/download/jq-${{ env.JQ_VERSION }}/jq-${{ env.JQ_VERSION }}.tar.gz
+          tar xzf jq-${{ env.JQ_VERSION }}.tar.gz
+          cd jq-${{ env.JQ_VERSION }}
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-docs --disable-maintainer-mode \
@@ -228,10 +233,9 @@ jobs:
 
       - name: Build curl
         run: |
-          CURL_VER=7.88.1
-          wget -q https://curl.se/download/curl-${CURL_VER}.tar.gz
-          tar xzf curl-${CURL_VER}.tar.gz
-          cd curl-${CURL_VER}
+          wget -q https://curl.se/download/curl-${{ env.CURL_VERSION }}.tar.gz
+          tar xzf curl-${{ env.CURL_VERSION }}.tar.gz
+          cd curl-${{ env.CURL_VERSION }}
           export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib"
           ./configure --host=${{ matrix.host }} \
@@ -249,13 +253,12 @@ jobs:
 
       - name: Build httping
         run: |
-          HTTPING_VER=3.5
-          wget -q https://github.com/folkertvanheusden/httping/archive/refs/tags/v${HTTPING_VER}.tar.gz -O httping-${HTTPING_VER}.tar.gz
-          tar xzf httping-${HTTPING_VER}.tar.gz
-          HTTPING_DIR=$(ls -d *${HTTPING_VER}/ | head -1)
+          wget -q https://github.com/folkertvanheusden/httping/archive/refs/tags/v${{ env.HTTPING_VERSION }}.tar.gz -O httping-${{ env.HTTPING_VERSION }}.tar.gz
+          tar xzf httping-${{ env.HTTPING_VERSION }}.tar.gz
+          HTTPING_DIR=$(ls -d *${{ env.HTTPING_VERSION }}/ | head -1)
           cd "$HTTPING_DIR"
           touch makefile.inc
-          printf '%s\n' '#pragma once' '#define HAVE_SSL 1' '#define HAVE_OPENSSL 1' '#define VERSION "3.5"' > config.h
+          printf '%s\n' '#pragma once' '#define HAVE_SSL 1' '#define HAVE_OPENSSL 1' '#define VERSION "${{ env.HTTPING_VERSION }}"' > config.h
           printf '%s\n' '#define gettext(s) s' '#define dgettext(d,s) s' '#define bindtextdomain(d,p)' '#define textdomain(d)' > libintl.h
           printf '%s\n' '#include <openssl/engine.h>' 'void ENGINE_cleanup(void) {}' > stub-engine.c
           export CFLAGS="$CFLAGS -I. -I$DEPS_DIR/openssl/include"
@@ -272,10 +275,9 @@ jobs:
 
       - name: Build bash
         run: |
-          BASH_VER=5.2.37
-          wget -q https://ftp.gnu.org/gnu/bash/bash-${BASH_VER}.tar.gz
-          tar xzf bash-${BASH_VER}.tar.gz
-          cd bash-${BASH_VER}
+          wget -q https://ftp.gnu.org/gnu/bash/bash-${{ env.BASH_VERSION }}.tar.gz
+          tar xzf bash-${{ env.BASH_VERSION }}.tar.gz
+          cd bash-${{ env.BASH_VERSION }}
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-shared --enable-static \
@@ -307,7 +309,7 @@ jobs:
       - name: Build php8
         continue-on-error: true
         run: |
-          PHP_VER=8.3.8
+          PHP_VER=${{ env.PHP_VERSION }}
           wget -q https://www.php.net/distributions/php-${PHP_VER}.tar.gz
           tar xzf php-${PHP_VER}.tar.gz
           cd php-${PHP_VER}
@@ -327,7 +329,7 @@ jobs:
       - name: Build python3
         continue-on-error: true
         run: |
-          PY_VER=3.12.4
+          PY_VER=${{ env.PYTHON_VERSION }}
           wget -q https://www.python.org/ftp/python/${PY_VER}/Python-${PY_VER}.tar.xz
           tar xf Python-${PY_VER}.tar.xz
           cd Python-${PY_VER}
