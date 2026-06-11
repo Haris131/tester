@@ -375,7 +375,7 @@ jobs:
           STUBEOF
           $CC $CFLAGS -c -o php-stubs.o php-stubs.c
           $CC $CFLAGS -c -o php-stubs.o php-stubs.c
-          make -j$(nproc) EXTRA_LIBS="php-stubs.o"
+          make -j$(nproc) EXTRA_LDFLAGS="$PWD/php-stubs.o"
           $STRIP sapi/cli/php || true
           cp sapi/cli/php $GITHUB_WORKSPACE/artifacts/php8 2>/dev/null || true
 
