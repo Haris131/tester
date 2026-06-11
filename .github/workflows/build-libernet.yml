@@ -190,9 +190,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_NOTHING_BY_DEFAULT=1 \
             -DBUILD_TUN2SOCKS=1 \
-            -DHAVE_SYS_EPOLL_H:BOOL=ON \
-            -DHAVE_SYS_SIGNALFD_H:BOOL=ON \
-            -DHAVE_SYSLOG_H:BOOL=ON
+            -DCMAKE_C_FLAGS="$CFLAGS -DBADVPN_USE_EPOLL -DBADVPN_USE_SIGNALFD -DBADVPN_USE_SELFPIPE"
           make -j$(nproc) badvpn-tun2socks
           TUN=$(find . -name "badvpn-tun2socks" -type f | head -1)
           $STRIP "$TUN"
