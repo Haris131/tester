@@ -348,6 +348,8 @@ jobs:
           cd php-${PHP_VER}
           export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include"
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib"
+          # Android Bionic lacks complete __res_state struct; disable res_nsearch
+          ac_cv_func___res_nsearch=no \
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-all --disable-cgi --disable-phpdbg \
