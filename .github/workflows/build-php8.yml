@@ -174,7 +174,7 @@ jobs:
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-all \
-            --without-pear --enable-sockets --enable-pcntl \
+            --without-pear --enable-sockets --enable-pcntl --enable-session \
             --enable-cgi --disable-phpdbg \
             --with-openssl="$DEPS_DIR/openssl" \
             --with-zlib="$DEPS_DIR/zlib" \
