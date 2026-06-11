@@ -204,30 +204,30 @@ jobs:
            # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
             printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
            sed -i 's|^bzero(void \*b, size_t n)|#ifdef bzero\n#undef bzero\n#endif\nbzero(void *b, size_t n)|' openbsd-compat/bsd-misc.c
-           # Provide getifaddrs stub for API < 24 (will be auto-compiled by make via openbsd-compat/)
-           printf '%s\n' '#include "includes.h"' \
-             '#if defined(__ANDROID_API__) && __ANDROID_API__ < 24' \
-             '#include <errno.h>' \
-             '#include <sys/socket.h>' \
-             'struct ifaddrs {' \
-             '    struct ifaddrs *ifa_next;' \
-             '    char *ifa_name;' \
-             '    unsigned int ifa_flags;' \
-             '    struct sockaddr *ifa_addr;' \
-             '    struct sockaddr *ifa_netmask;' \
-             '    struct sockaddr *ifa_dstaddr;' \
-             '    void *ifa_data;' \
-             '};' \
-             'int getifaddrs(struct ifaddrs **ifap) {' \
-             '    *ifap = NULL;' \
-             '    errno = ENOSYS;' \
-             '    return -1;' \
-             '}' \
-             'void freeifaddrs(struct ifaddrs *ifa) {' \
-             '    (void)ifa;' \
-             '}' \
-             '#endif' > openbsd-compat/bsd-getifaddrs.c
-           export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+            # Provide getifaddrs stub for API < 24 (Android lacks this before API 24)
+            printf '%s\n' '#include "includes.h"' \
+              '#if defined(__ANDROID_API__) && __ANDROID_API__ < 24' \
+              '#include <errno.h>' \
+              '#include <sys/socket.h>' \
+              'struct ifaddrs {' \
+              '    struct ifaddrs *ifa_next;' \
+              '    char *ifa_name;' \
+              '    unsigned int ifa_flags;' \
+              '    struct sockaddr *ifa_addr;' \
+              '    struct sockaddr *ifa_netmask;' \
+              '    struct sockaddr *ifa_dstaddr;' \
+              '    void *ifa_data;' \
+              '};' \
+              'int getifaddrs(struct ifaddrs **ifap) {' \
+              '    *ifap = NULL;' \
+              '    errno = ENOSYS;' \
+              '    return -1;' \
+              '}' \
+              'void freeifaddrs(struct ifaddrs *ifa) {' \
+              '    (void)ifa;' \
+              '}' \
+              '#endif' > openbsd-compat/bsd-getifaddrs.c
+            export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
            CC="$CC" \
@@ -264,7 +264,9 @@ jobs:
              --disable-pututline \
              --disable-pututxline \
                --disable-pkcs11
-           make -j$(nproc) ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
+            # Compile getifaddrs stub and add to link via LIBS override
+            $CC $CFLAGS -I. -c -o bsd-getifaddrs.o openbsd-compat/bsd-getifaddrs.c
+            make -j$(nproc) LIBS="$(sed -n 's/^LIBS=//p' Makefile) $PWD/bsd-getifaddrs.o" ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
           for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
             [ -f "$f" ] && $STRIP "$f" && cp "$f" $GITHUB_WORKSPACE/artifacts/
           done
