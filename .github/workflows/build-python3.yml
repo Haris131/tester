@@ -177,12 +177,15 @@ jobs:
           export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include"
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib"
           ./configure --host=${{ matrix.host }} \
-            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+            CC="$CC" CFLAGS="$CFLAGS -Wno-error=implicit-function-declaration" LDFLAGS="$LDFLAGS" \
             --build=x86_64-linux-gnu \
             --with-build-python=$(which python3) \
             --disable-ipv6 \
+            --disable-grp \
             ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no \
-            ac_cv_func_accept=yes
+            ac_cv_func_accept=yes \
+            ac_cv_func_sendfile=no ac_cv_func_truncate=no \
+            ac_cv_func_setgrent=no ac_cv_func_getgrent=no ac_cv_func_endgrent=no
           make -j$(nproc) || true
           $STRIP python || true
           mkdir -p $GITHUB_WORKSPACE/artifacts
