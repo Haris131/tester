@@ -257,9 +257,11 @@ jobs:
           touch makefile.inc
           printf '%s\n' '#pragma once' '#define HAVE_SSL 1' '#define HAVE_OPENSSL 1' '#define VERSION "3.5"' > config.h
           printf '%s\n' '#define gettext(s) s' '#define dgettext(d,s) s' '#define bindtextdomain(d,p)' '#define textdomain(d)' > libintl.h
+          printf '%s\n' '#include <openssl/engine.h>' 'void ENGINE_cleanup(void) {}' > stub-engine.c
           export CFLAGS="$CFLAGS -I. -I$DEPS_DIR/openssl/include"
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib"
-          make CC="$CC" LIBS="-lssl -lcrypto -lz -ldl" NO_GETTEXT=yes SSL=yes -j$(nproc)
+          $CC $CFLAGS -c -o stub-engine.o stub-engine.c
+          make CC="$CC" LIBS="-lssl -lcrypto -lz -ldl ./stub-engine.o" NO_GETTEXT=yes SSL=yes -j$(nproc)
           $STRIP httping
           cp httping $GITHUB_WORKSPACE/artifacts/
 
