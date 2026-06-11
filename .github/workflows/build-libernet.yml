@@ -280,9 +280,7 @@ jobs:
           cd bash-${{ env.BASH_VERSION }}
           # Android Bionic declares int dprintf() unconditionally in <stdio.h>,
           # but bash declares void dprintf() causing conflicting types error
-          # Tell configure these exist so it doesn't provide its own declarations
           export ac_cv_func_dprintf=yes
-          export ac_cv_func_mblen=no
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-shared --enable-static \
@@ -291,9 +289,19 @@ jobs:
             --disable-progcomp --disable-nls
           # Remove bash's dprintf declaration (conflicts with Bionic's int dprintf)
           sed -i '/extern void dprintf/d' externs.h
-          # Bionic lacks mblen before API 26
-          sed -i 's/#define HAVE_MBLEN 1/\/\* #undef HAVE_MBLEN \*\//' config.h
-          make -j$(nproc)
+          # Bionic lacks mblen before API 26 — provide stub using mbrlen (which exists)
+          cat > mblen-stub.c << 'MBEOF'
+          #include <stddef.h>
+          #include <wchar.h>
+          #include <string.h>
+          int mblen(const char *s, size_t n) {
+            static mbstate_t state;
+            if (s == NULL) { memset(&state, 0, sizeof(state)); return 0; }
+            return mbrlen(s, n, &state);
+          }
+          MBEOF
+          $CC $CFLAGS -c -o mblen-stub.o mblen-stub.c
+          make -j$(nproc) LDFLAGS+=" mblen-stub.o"
           $STRIP bash
           cp bash $GITHUB_WORKSPACE/artifacts/
 
