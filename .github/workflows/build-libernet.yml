@@ -355,11 +355,10 @@ jobs:
             --with-openssl="$DEPS_DIR/openssl" \
             --with-zlib="$DEPS_DIR/zlib" \
             --with-config-file-scan-dir=/data/data/com.termux/files/usr/etc/php.d
-          # Android Bionic resolv.h uses different struct definitions; include it properly
-          sed -i '1i#include <resolv.h>' ext/standard/dns.c
-          # Undefine DNS skipname macros (Bionic has __dn_skipname, not dn_skipname)
+          # Bionic lacks res_n* API and declares incomplete __res_state; disable DNS resolver
+          sed -i '/#define HAVE_RES_NSEARCH/d;/#define HAVE___RES_NSEARCH/d' main/php_config.h
           sed -i '/#define HAVE_DN_SKIPNAME/d;/#define HAVE___DN_SKIPNAME/d' main/php_config.h
-          # Provide stubs for system functions declared in Bionic headers but not in libc
+          # Provide stubs for system+PHP functions undeclared in Bionic libc
           cat > php-stubs.c << 'STUBEOF'
           #include <stddef.h>
           #include <wchar.h>
@@ -371,6 +370,8 @@ jobs:
             return mbrlen(s, n, &_ms);
           }
           int getdtablesize(void) { return sysconf(_SC_OPEN_MAX); }
+          void zif_dns_get_record(void *d, void *rv) { }
+          void zif_dns_get_mx(void *d, void *rv) { }
           STUBEOF
           $CC $CFLAGS -c -o php-stubs.o php-stubs.c
           $CC $CFLAGS -c -o php-stubs.o php-stubs.c
