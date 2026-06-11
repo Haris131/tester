@@ -11,7 +11,9 @@ env:
   SSH_VERSION: 9.9p1
   BADVPN_VERSION: 1.999.130
   STUNNEL_VERSION: 5.78
-  CACHE_PREFIX: v1
+  GETDNS_VERSION: v1.7.3
+  YAML_VERSION: 0.2.5
+  CACHE_PREFIX: v2
 
 jobs:
   build:
@@ -139,6 +141,20 @@ jobs:
             -DOPENSSL_NO_SECURE_MEMORY
           make -j$(nproc)
           make install_sw
+
+      - name: Build libyaml ${{ env.YAML_VERSION }}
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          wget -q https://github.com/yaml/libyaml/releases/download/${{ env.YAML_VERSION }}/yaml-${{ env.YAML_VERSION }}.tar.gz
+          tar xzf yaml-${{ env.YAML_VERSION }}.tar.gz
+          cd yaml-${{ env.YAML_VERSION }}
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" \
+            CFLAGS="$CFLAGS" \
+            --prefix="$DEPS_DIR/yaml" \
+            --disable-shared --enable-static
+          make -j$(nproc)
+          make install
 
       - name: Build sshpass
         run: |
@@ -308,6 +324,55 @@ jobs:
             APP_ABI=${{ matrix.abi }} \
             APP_PLATFORM=android-${{ matrix.api }}
           find obj -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/tun2socks-udprelay \;
+
+      - name: Build stubby
+        run: |
+          git clone --depth 1 --branch ${{ env.GETDNS_VERSION }} --recurse-submodules https://github.com/getdnsapi/getdns.git getdns-${{ env.GETDNS_VERSION }}
+          # Build bsd_signal stub (Android doesn't have bsd_signal)
+          cat > bsd_signal_stub.c << 'EOF'
+          #include <signal.h>
+          void (*bsd_signal(int sig, void (*func)(int)))(int) {
+              return signal(sig, func);
+          }
+          EOF
+          $CC -c -o bsd_signal_stub.o bsd_signal_stub.c
+          $AR rcs libbsd_signal_stub.a bsd_signal_stub.o
+          cd getdns-${{ env.GETDNS_VERSION }}
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DANDROID_PLATFORM=android-${{ matrix.api }} \
+            -DANDROID_STL=none \
+            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/stubby-build \
+            -DBUILD_STUBBY=ON \
+            -DENABLE_STUB_ONLY=ON \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOPENSSL_ROOT_DIR=$DEPS_DIR/openssl \
+            -DOPENSSL_INCLUDE_DIR=$DEPS_DIR/openssl/include \
+            -DOPENSSL_CRYPTO_LIBRARY=$DEPS_DIR/openssl/lib/libcrypto.a \
+            -DOPENSSL_SSL_LIBRARY=$DEPS_DIR/openssl/lib/libssl.a \
+            -DYAML_LIBRARY=$DEPS_DIR/yaml/lib/libyaml.a \
+            -DYAML_INCLUDE_DIR=$DEPS_DIR/yaml/include \
+            -DUSE_LIBIDN2=OFF \
+            -DHAVE_DSA_SIG_SET0=1 \
+            -DHAVE_DSA_SET0_PQG=1 \
+            -DHAVE_DSA_SET0_KEY=1 \
+            -DHAVE_RSA_SET0_KEY=1 \
+            -DHAVE_EVP_MD_CTX_NEW=1 \
+            -DHAVE_EVP_DIGESTVERIFY=1 \
+            -DHAVE_HMAC_CTX_NEW=1 \
+            -DHAVE_OPENSSL_VERSION_NUM=1 \
+            -DHAVE_OPENSSL_VERSION=1 \
+            -DHAVE_SSL_CTX_SET_CIPHERSUITES=1 \
+            -DHAVE_SSL_SET_CIPHERSUITES=1 \
+            -DCMAKE_EXE_LINKER_FLAGS="-fPIE -pie -ldl $GITHUB_WORKSPACE/libbsd_signal_stub.a" \
+            -DCMAKE_FIND_ROOT_PATH="$DEPS_DIR/openssl;$DEPS_DIR/yaml"
+          make -j$(nproc)
+          make install
+          $STRIP $GITHUB_WORKSPACE/stubby-build/bin/stubby
+          cp $GITHUB_WORKSPACE/stubby-build/bin/stubby $GITHUB_WORKSPACE/artifacts/
 
       - name: Package
         run: |

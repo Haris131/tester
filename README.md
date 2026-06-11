@@ -11,6 +11,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [OpenSSH client](https://www.openssh.com/) | SSH, scp, sftp, ssh-keygen, ssh-keyscan |
 | [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy |
 | [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling |
+| [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) |
 
 ## Build Matrix
 
