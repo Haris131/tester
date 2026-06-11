@@ -264,7 +264,7 @@ jobs:
              '    (void)ifa;' \
              '}' \
              '#endif' > openbsd-compat/bsd-getifaddrs.c
-           $CC $CFLAGS -c -o bsd-getifaddrs.o openbsd-compat/bsd-getifaddrs.c
+           $CC $CFLAGS -I. -c -o bsd-getifaddrs.o openbsd-compat/bsd-getifaddrs.c
            export LIBS="-ldl $PWD/bsd-getifaddrs.o"
            make -j$(nproc) ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
           for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
