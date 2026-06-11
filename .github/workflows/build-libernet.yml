@@ -278,13 +278,20 @@ jobs:
           wget -q https://ftp.gnu.org/gnu/bash/bash-${{ env.BASH_VERSION }}.tar.gz
           tar xzf bash-${{ env.BASH_VERSION }}.tar.gz
           cd bash-${{ env.BASH_VERSION }}
+          # Android Bionic declares int dprintf() unconditionally in <stdio.h>,
+          # but bash declares void dprintf() causing conflicting types error
+          # Tell configure these exist so it doesn't provide its own declarations
+          export ac_cv_func_dprintf=yes
+          export ac_cv_func_mblen=no
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-shared --enable-static \
             --without-bash-malloc \
             --disable-readline --disable-history \
             --disable-progcomp --disable-nls
-          # Android Bionic lacks mblen before API 26
+          # Remove bash's dprintf declaration (conflicts with Bionic's int dprintf)
+          sed -i '/extern void dprintf/d' externs.h
+          # Bionic lacks mblen before API 26
           sed -i 's/#define HAVE_MBLEN 1/\/\* #undef HAVE_MBLEN \*\//' config.h
           make -j$(nproc)
           $STRIP bash
