@@ -355,12 +355,26 @@ jobs:
             --with-openssl="$DEPS_DIR/openssl" \
             --with-zlib="$DEPS_DIR/zlib" \
             --with-config-file-scan-dir=/data/data/com.termux/files/usr/etc/php.d
-          # Undefine HAVE macros for functions declared in Bionic headers but not in libc
-          for macro in HAVE_RES_NSEARCH HAVE___RES_NSEARCH HAVE_DN_SKIPNAME \
-            HAVE___DN_SKIPNAME HAVE_MBLEN HAVE_GETDTABLESIZE; do
-            sed -i "/#define $macro/d" main/php_config.h
-          done
-          make -j$(nproc)
+          # Android Bionic resolv.h uses different struct definitions; include it properly
+          sed -i '1i#include <resolv.h>' ext/standard/dns.c
+          # Undefine DNS skipname macros (Bionic has __dn_skipname, not dn_skipname)
+          sed -i '/#define HAVE_DN_SKIPNAME/d;/#define HAVE___DN_SKIPNAME/d' main/php_config.h
+          # Provide stubs for system functions declared in Bionic headers but not in libc
+          cat > php-stubs.c << 'STUBEOF'
+          #include <stddef.h>
+          #include <wchar.h>
+          #include <string.h>
+          #include <unistd.h>
+          int mblen(const char *s, size_t n) {
+            static mbstate_t _ms;
+            if (!s) { memset(&_ms, 0, sizeof(_ms)); return 0; }
+            return mbrlen(s, n, &_ms);
+          }
+          int getdtablesize(void) { return sysconf(_SC_OPEN_MAX); }
+          STUBEOF
+          $CC $CFLAGS -c -o php-stubs.o php-stubs.c
+          $CC $CFLAGS -c -o php-stubs.o php-stubs.c
+          make -j$(nproc) EXTRA_LIBS="php-stubs.o"
           $STRIP sapi/cli/php || true
           cp sapi/cli/php $GITHUB_WORKSPACE/artifacts/php8 2>/dev/null || true
 
