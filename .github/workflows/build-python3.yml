@@ -183,7 +183,8 @@ jobs:
             --disable-ipv6 \
             ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no \
             ac_cv_func_accept=yes \
-            ac_cv_func_sendfile=no ac_cv_func_truncate=no
+            ac_cv_func_sendfile=no ac_cv_func_truncate=no \
+            ac_cv_func_ffi_call=no ac_cv_have_ffi_prep_closure_loc=no
           export CFLAGS_NODIST="-Wno-error=implicit-function-declaration"
           make -j$(nproc) CFLAGS_NODIST="$CFLAGS_NODIST" || true
           $STRIP python || true

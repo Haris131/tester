@@ -173,8 +173,9 @@ jobs:
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib"
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-            --disable-all --disable-cgi --disable-phpdbg \
+            --disable-all \
             --without-pear --enable-sockets --enable-pcntl \
+            --enable-cgi --enable-phpdbg \
             --with-openssl="$DEPS_DIR/openssl" \
             --with-zlib="$DEPS_DIR/zlib" \
             --with-config-file-scan-dir=/data/data/com.termux/files/usr/etc/php.d
@@ -200,8 +201,12 @@ jobs:
           make -j$(nproc) EXTRA_LDFLAGS="$PWD/php-stubs.o" || \
           make -j$(nproc) EXTRA_LIBS="$PWD/php-stubs.o $DEPS_DIR/openssl/lib/libssl.a $DEPS_DIR/openssl/lib/libcrypto.a $DEPS_DIR/zlib/lib/libz.a -lm -ldl"
           $STRIP sapi/cli/php || true
+          $STRIP sapi/cgi/php-cgi 2>/dev/null || true
+          $STRIP sapi/phpdbg/phpdbg 2>/dev/null || true
           mkdir -p $GITHUB_WORKSPACE/artifacts
           cp sapi/cli/php $GITHUB_WORKSPACE/artifacts/php8 2>/dev/null || true
+          cp sapi/cgi/php-cgi $GITHUB_WORKSPACE/artifacts/ 2>/dev/null || true
+          cp sapi/phpdbg/phpdbg $GITHUB_WORKSPACE/artifacts/ 2>/dev/null || true
 
       - name: Package
         run: |
