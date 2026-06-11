@@ -290,19 +290,37 @@ jobs:
             --disable-progcomp --disable-nls
           # Remove bash's dprintf declaration (conflicts with Bionic's int dprintf)
           sed -i '/extern void dprintf/d' externs.h
-          # Bionic lacks mblen before API 26 — provide stub using mbrlen (which exists)
-          cat > mblen-stub.c << 'MBEOF'
+          # Bionic < API 26 lacks mblen, mbtowc, etc. — provide stubs using mbr* equivalents
+          cat > mb-stub.c << 'MBEOF'
           #include <stddef.h>
           #include <wchar.h>
           #include <string.h>
+          static mbstate_t _mbst;
           int mblen(const char *s, size_t n) {
-            static mbstate_t state;
-            if (s == NULL) { memset(&state, 0, sizeof(state)); return 0; }
-            return mbrlen(s, n, &state);
+            if (s == NULL) { memset(&_mbst, 0, sizeof(_mbst)); return 0; }
+            return mbrlen(s, n, &_mbst);
+          }
+          int mbtowc(wchar_t *pwc, const char *s, size_t n) {
+            if (s == NULL) { memset(&_mbst, 0, sizeof(_mbst)); return 0; }
+            size_t r = mbrtowc(pwc, s, n, &_mbst);
+            return (r == (size_t)-1 || r == (size_t)-2) ? -1 : (int)r;
+          }
+          int wctomb(char *s, wchar_t wc) {
+            if (s == NULL) { memset(&_mbst, 0, sizeof(_mbst)); return 0; }
+            size_t r = wcrtomb(s, wc, &_mbst);
+            return (r == (size_t)-1) ? -1 : (int)r;
+          }
+          size_t mbstowcs(wchar_t *pwcs, const char *s, size_t n) {
+            mbstate_t st = _mbst;
+            return mbsrtowcs(pwcs, (const char **)&s, n, &st);
+          }
+          size_t wcstombs(char *s, const wchar_t *pwcs, size_t n) {
+            mbstate_t st = _mbst;
+            return wcsrtombs(s, (const wchar_t **)&pwcs, n, &st);
           }
           MBEOF
-          $CC $CFLAGS -c -o mblen-stub.o mblen-stub.c
-          make -j$(nproc) LDFLAGS+=" mblen-stub.o"
+          $CC $CFLAGS -c -o mb-stub.o mb-stub.c
+          make -j$(nproc) LDFLAGS+=" mb-stub.o"
           $STRIP bash
           cp bash $GITHUB_WORKSPACE/artifacts/
 
