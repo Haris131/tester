@@ -355,9 +355,11 @@ jobs:
             --with-openssl="$DEPS_DIR/openssl" \
             --with-zlib="$DEPS_DIR/zlib" \
             --with-config-file-scan-dir=/data/data/com.termux/files/usr/etc/php.d
-          # Android Bionic has incomplete __res_state struct; undefine DNS resolver HAVE macros
-          sed -i '/#define HAVE_RES_NSEARCH/d' main/php_config.h
-          sed -i '/#define HAVE___RES_NSEARCH/d' main/php_config.h
+          # Undefine HAVE macros for functions declared in Bionic headers but not in libc
+          for macro in HAVE_RES_NSEARCH HAVE___RES_NSEARCH HAVE_DN_SKIPNAME \
+            HAVE___DN_SKIPNAME HAVE_MBLEN HAVE_GETDTABLESIZE; do
+            sed -i "/#define $macro/d" main/php_config.h
+          done
           make -j$(nproc)
           $STRIP sapi/cli/php || true
           cp sapi/cli/php $GITHUB_WORKSPACE/artifacts/php8 2>/dev/null || true
