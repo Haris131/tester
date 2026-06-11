@@ -192,7 +192,7 @@ jobs:
             -DBUILD_TUN2SOCKS=1
           make -j$(nproc) tun2socks
           find .. -name tun2socks -type f
-          fine .. -name badvpn-tun2socks -type f
+          find .. -name badvpn-tun2socks -type f
           find . -name "tun2socks" -type f -exec $STRIP {} \; -exec cp {} $GITHUB_WORKSPACE/artifacts/ \;
 
       - name: Build corkscrew
