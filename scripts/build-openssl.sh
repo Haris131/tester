@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 wget -q "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz"
 tar xzf "openssl-${OPENSSL_VERSION}.tar.gz"

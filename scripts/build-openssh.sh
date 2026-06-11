@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 curl -fSL -o "openssh-${SSH_VERSION}.tar.gz" https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${SSH_VERSION}.tar.gz || \
 curl -fSL -o "openssh-${SSH_VERSION}.tar.gz" https://cloudflare.cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${SSH_VERSION}.tar.gz || \

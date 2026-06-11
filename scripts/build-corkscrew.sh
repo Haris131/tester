@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 wget -q https://deb.debian.org/debian/pool/main/c/corkscrew/corkscrew_2.0.orig.tar.gz -O corkscrew-2.0.tar.gz 2>&1 || \
 wget -q http://ftp.debian.org/debian/pool/main/c/corkscrew/corkscrew_2.0.orig.tar.gz -O corkscrew-2.0.tar.gz 2>&1 || \

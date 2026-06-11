@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 wget -q "https://github.com/madler/zlib/archive/refs/tags/v${ZLIB_VERSION}.tar.gz" -O "zlib-${ZLIB_VERSION}.tar.gz"
 tar xzf "zlib-${ZLIB_VERSION}.tar.gz"

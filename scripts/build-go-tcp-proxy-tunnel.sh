@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 git clone --depth=1 https://github.com/lutfailham96/go-tcp-proxy-tunnel.git
 cd go-tcp-proxy-tunnel

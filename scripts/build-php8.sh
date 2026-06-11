@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 PHP_VER="$PHP_VERSION"
 wget -q "https://www.php.net/distributions/php-${PHP_VER}.tar.gz"

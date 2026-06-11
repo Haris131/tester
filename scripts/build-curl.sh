@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 wget -q "https://curl.se/download/curl-${CURL_VERSION}.tar.gz"
 tar xzf "curl-${CURL_VERSION}.tar.gz"

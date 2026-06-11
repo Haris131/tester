@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 wget -q "https://github.com/ambrop72/badvpn/archive/refs/tags/${BADVPN_VERSION}.tar.gz" -O badvpn.tar.gz
 tar xzf badvpn.tar.gz

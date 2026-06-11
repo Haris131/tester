@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 git clone --depth 1 --branch "$GETDNS_VERSION" --recurse-submodules https://github.com/getdnsapi/getdns.git "getdns-${GETDNS_VERSION}"
 cat > bsd_signal_stub.c << 'EOF'

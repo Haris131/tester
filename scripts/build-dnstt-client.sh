@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 git clone --depth=1 https://github.com/Haris131/dnstt.git
 cd dnstt

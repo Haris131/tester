@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 wget -q "https://github.com/folkertvanheusden/httping/archive/refs/tags/v${HTTPING_VERSION}.tar.gz" -O "httping-${HTTPING_VERSION}.tar.gz"
 tar xzf "httping-${HTTPING_VERSION}.tar.gz"

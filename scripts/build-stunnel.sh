@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 cd "$GITHUB_WORKSPACE"
 curl -fSL -o "stunnel-${STUNNEL_VERSION}.tar.gz" https://www.stunnel.org/downloads/stunnel-${STUNNEL_VERSION}.tar.gz || \
 curl -fSL -o "stunnel-${STUNNEL_VERSION}.tar.gz" https://www.usenix.org.uk/mirrors/stunnel/archive/5.x/stunnel-${STUNNEL_VERSION}.tar.gz || \
