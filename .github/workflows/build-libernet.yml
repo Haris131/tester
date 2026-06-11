@@ -181,6 +181,11 @@ jobs:
         run: |
           wget -q https://github.com/ambrop72/badvpn/archive/refs/tags/${{ env.BADVPN_VERSION }}.tar.gz -O badvpn.tar.gz
           tar xzf badvpn.tar.gz
+          # Make badvpn detect Android as Linux (NDK sets CMAKE_SYSTEM_NAME=Android)
+          sed -i 's/elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")/elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Android")/' badvpn-${{ env.BADVPN_VERSION }}/CMakeLists.txt
+          # Android lacks librt; create empty stub so link_libraries(rt) doesn't fail
+          mkdir -p $DEPS_DIR
+          $AR rcs $DEPS_DIR/librt.a
           cd badvpn-${{ env.BADVPN_VERSION }}
           mkdir build && cd build
           cmake .. \
@@ -190,9 +195,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_NOTHING_BY_DEFAULT=1 \
             -DBUILD_TUN2SOCKS=1 \
-            -DBADVPN_LINUX=1 \
-            -DBADVPN_USE_SIGNALFD=1 \
-            -DBADVPN_USE_EPOLL=1
+            -DCMAKE_EXE_LINKER_FLAGS="-L$DEPS_DIR"
           make
           TUN=$(find . -name "badvpn-tun2socks" -type f | head -1)
           $STRIP "$TUN"
