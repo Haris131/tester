@@ -179,8 +179,9 @@ jobs:
 
       - name: Build badvpn-tun2socks
         run: |
-          git clone --depth=1 https://github.com/FH0/badvpn.git
-          cd badvpn
+          wget -q https://github.com/ambrop72/badvpn/archive/refs/tags/${{ env.BADVPN_VERSION }}.tar.gz -O badvpn.tar.gz
+          tar xzf badvpn.tar.gz
+          cd badvpn-${{ env.BADVPN_VERSION }}
           mkdir build && cd build
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake \
@@ -188,7 +189,10 @@ jobs:
             -DANDROID_PLATFORM=android-${{ matrix.api }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_NOTHING_BY_DEFAULT=1 \
-            -DBUILD_TUN2SOCKS=1
+            -DBUILD_TUN2SOCKS=1 \
+            -DBADVPN_LINUX=1 \
+            -DBADVPN_USE_SIGNALFD=1 \
+            -DBADVPN_USE_EPOLL=1
           make
           TUN=$(find . -name "badvpn-tun2socks" -type f | head -1)
           $STRIP "$TUN"
