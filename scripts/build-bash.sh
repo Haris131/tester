@@ -1,9 +1,9 @@
 #!/bin/bash
 
 cd "$GITHUB_WORKSPACE"
-wget -q "https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}.tar.gz"
-tar xzf "bash-${BASH_VERSION}.tar.gz"
-cd "bash-${BASH_VERSION}"
+wget -q "https://ftp.gnu.org/gnu/bash/bash-${BASH_VER}.tar.gz"
+tar xzf "bash-${BASH_VER}.tar.gz"
+cd "bash-${BASH_VER}"
 export ac_cv_func_dprintf=yes
 export ac_cv_func_mkfifo=yes
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
