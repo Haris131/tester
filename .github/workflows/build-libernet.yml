@@ -281,8 +281,9 @@ jobs:
             --disable-shared --enable-static \
             --without-bash-malloc \
             --disable-readline --disable-history \
-            --disable-progcomp --disable-nls \
-            bash_cv_func_mblen=no ac_cv_func_mblen=no
+            --disable-progcomp --disable-nls
+          # Android Bionic lacks mblen before API 26
+          sed -i 's/#define HAVE_MBLEN 1/\/\* #undef HAVE_MBLEN \*\//' config.h
           make -j$(nproc)
           $STRIP bash
           cp bash $GITHUB_WORKSPACE/artifacts/
