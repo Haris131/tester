@@ -228,7 +228,6 @@ jobs:
            ac_cv_func_mblen=yes \
             ac_cv_func_getpagesize=yes \
             ac_cv_c___attribute__=yes \
-            ac_cv_func_getifaddrs=$(if [ ${{ matrix.api }} -lt 24 ]; then echo no; else echo yes; fi) \
             ./configure --host=${{ matrix.host }} \
              --with-zlib="$DEPS_DIR/zlib" \
              --with-ssl-dir="$DEPS_DIR/openssl" \
@@ -241,8 +240,33 @@ jobs:
              --disable-wtmpx \
              --disable-pututline \
              --disable-pututxline \
-             --disable-pkcs11
-          make -j$(nproc) ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
+              --disable-pkcs11
+           # Provide getifaddrs stub for API < 24 (Android lacks this before API 24)
+           printf '%s\n' '#include "includes.h"' \
+             '#if defined(__ANDROID_API__) && __ANDROID_API__ < 24' \
+             '#include <errno.h>' \
+             '#include <sys/socket.h>' \
+             'struct ifaddrs {' \
+             '    struct ifaddrs *ifa_next;' \
+             '    char *ifa_name;' \
+             '    unsigned int ifa_flags;' \
+             '    struct sockaddr *ifa_addr;' \
+             '    struct sockaddr *ifa_netmask;' \
+             '    struct sockaddr *ifa_dstaddr;' \
+             '    void *ifa_data;' \
+             '};' \
+             'int getifaddrs(struct ifaddrs **ifap) {' \
+             '    *ifap = NULL;' \
+             '    errno = ENOSYS;' \
+             '    return -1;' \
+             '}' \
+             'void freeifaddrs(struct ifaddrs *ifa) {' \
+             '    (void)ifa;' \
+             '}' \
+             '#endif' > openbsd-compat/bsd-getifaddrs.c
+           $CC $CFLAGS -c -o bsd-getifaddrs.o openbsd-compat/bsd-getifaddrs.c
+           export LIBS="-ldl $PWD/bsd-getifaddrs.o"
+           make -j$(nproc) ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
           for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
             [ -f "$f" ] && $STRIP "$f" && cp "$f" $GITHUB_WORKSPACE/artifacts/
           done
