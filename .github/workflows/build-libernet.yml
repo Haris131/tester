@@ -203,7 +203,7 @@ jobs:
           cd openssh-${{ env.SSH_VERSION }}
            # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
             printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
-           sed -i 's|void bzero(|#ifdef bzero\n#undef bzero\n#endif\nvoid bzero(|' openbsd-compat/bsd-misc.c
+           sed -i 's|^bzero(void \*b, size_t n)|#ifdef bzero\n#undef bzero\n#endif\nbzero(void *b, size_t n)|' openbsd-compat/bsd-misc.c
            export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
