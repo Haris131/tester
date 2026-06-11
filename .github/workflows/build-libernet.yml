@@ -220,6 +220,7 @@ jobs:
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-docs --disable-maintainer-mode \
+            --disable-shared --enable-static \
             --with-oniguruma=builtin
           make -j$(nproc)
           $STRIP jq
@@ -263,6 +264,22 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
+
+      - name: Build bash
+        run: |
+          BASH_VER=5.2.37
+          wget -q https://ftp.gnu.org/gnu/bash/bash-${BASH_VER}.tar.gz
+          tar xzf bash-${BASH_VER}.tar.gz
+          cd bash-${BASH_VER}
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+            --disable-shared --enable-static \
+            --without-bash-malloc \
+            --disable-readline --disable-history \
+            --disable-progcomp --disable-nls
+          make -j$(nproc)
+          $STRIP bash
+          cp bash $GITHUB_WORKSPACE/artifacts/
 
       - name: Build dnstt-client
         run: |
