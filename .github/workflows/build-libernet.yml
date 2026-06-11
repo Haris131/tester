@@ -93,7 +93,7 @@ jobs:
           echo "AR=$NDK_BIN/llvm-ar" >> $GITHUB_ENV
           echo "RANLIB=$NDK_BIN/llvm-ranlib" >> $GITHUB_ENV
           echo "STRIP=$NDK_BIN/llvm-strip" >> $GITHUB_ENV
-          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -D__bionic_bzero=__bionic_bzero -fPIE -fPIC" >> $GITHUB_ENV
+          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -fPIE -fPIC" >> $GITHUB_ENV
           echo "LDFLAGS=-fPIE -pie" >> $GITHUB_ENV
           echo "DEPS_DIR=$GITHUB_WORKSPACE/deps/${{ matrix.cc_target }}" >> $GITHUB_ENV
 
@@ -202,8 +202,9 @@ jobs:
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
           cd openssh-${{ env.SSH_VERSION }}
            # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
-           printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
-           export CFLAGS="$CFLAGS -D__bionic_bzero=__bionic_bzero -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+            printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
+           sed -i 's|void bzero(|#ifdef bzero\n#undef bzero\n#endif\nvoid bzero(|' openbsd-compat/bsd-misc.c
+           export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
            CC="$CC" \
