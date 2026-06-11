@@ -10,7 +10,7 @@ env:
   ZLIB_VERSION: 1.3.1
   SSH_VERSION: 9.9p1
   BADVPN_VERSION: 1.999.130
-  STUNNEL_VERSION: 5.74
+  STUNNEL_VERSION: 5.78
   CACHE_PREFIX: v1
 
 jobs:
@@ -226,9 +226,10 @@ jobs:
            ac_cv_func_malloc_0_nonnull=yes \
            ac_cv_func_realloc_0_nonnull=yes \
            ac_cv_func_mblen=yes \
-           ac_cv_func_getpagesize=yes \
-           ac_cv_c___attribute__=yes \
-           ./configure --host=${{ matrix.host }} \
+            ac_cv_func_getpagesize=yes \
+            ac_cv_c___attribute__=yes \
+            ac_cv_func_getifaddrs=$(if [ ${{ matrix.api }} -lt 24 ]; then echo no; else echo yes; fi) \
+            ./configure --host=${{ matrix.host }} \
              --with-zlib="$DEPS_DIR/zlib" \
              --with-ssl-dir="$DEPS_DIR/openssl" \
              --disable-strip \
@@ -248,7 +249,12 @@ jobs:
 
       - name: Build stunnel
         run: |
-          wget -q https://www.stunnel.org/downloads/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
+          curl -fSL -o stunnel-${{ env.STUNNEL_VERSION }}.tar.gz \
+            https://www.stunnel.org/downloads/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz || \
+          curl -fSL -o stunnel-${{ env.STUNNEL_VERSION }}.tar.gz \
+            https://www.usenix.org.uk/mirrors/stunnel/archive/5.x/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz || \
+          curl -fSL -o stunnel-${{ env.STUNNEL_VERSION }}.tar.gz \
+            https://fossies.org/linux/misc/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
           tar xzf stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
           cd stunnel-${{ env.STUNNEL_VERSION }}
           export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include"
