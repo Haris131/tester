@@ -1,0 +1,43 @@
+#!/bin/bash
+set -e
+cd "$GITHUB_WORKSPACE"
+curl -fSL -o "openssh-${SSH_VERSION}.tar.gz" https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${SSH_VERSION}.tar.gz || \
+curl -fSL -o "openssh-${SSH_VERSION}.tar.gz" https://cloudflare.cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${SSH_VERSION}.tar.gz || \
+curl -fSL -o "openssh-${SSH_VERSION}.tar.gz" https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${SSH_VERSION}.tar.gz
+tar xzf "openssh-${SSH_VERSION}.tar.gz"
+cd "openssh-${SSH_VERSION}"
+printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
+sed -i 's|^bzero(void \*b, size_t n)|#ifdef bzero\n#undef bzero\n#endif\nbzero(void *b, size_t n)|' openbsd-compat/bsd-misc.c
+printf '%s\n' '#include "includes.h"' \
+  '#if defined(__ANDROID_API__) && __ANDROID_API__ < 24' \
+  '#include <errno.h>' \
+  '#include <sys/socket.h>' \
+  'struct ifaddrs {' \
+  '    struct ifaddrs *ifa_next;' \
+  '    char *ifa_name;' \
+  '    unsigned int ifa_flags;' \
+  '    struct sockaddr *ifa_addr;' \
+  '    struct sockaddr *ifa_netmask;' \
+  '    struct sockaddr *ifa_dstaddr;' \
+  '    void *ifa_data;' \
+  '};' \
+  'int getifaddrs(struct ifaddrs **ifap) { *ifap = NULL; errno = ENOSYS; return -1; }' \
+  'void freeifaddrs(struct ifaddrs *ifa) { (void)ifa; }' \
+  '#endif' > openbsd-compat/bsd-getifaddrs.c
+export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
+export LIBS="-ldl"
+CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" LIBS="$LIBS" \
+  ac_cv_func_getaddrinfo=yes ac_cv_have_int64_t=yes ac_cv_have_u_int64_t=yes ac_cv_have_uint64_t=yes \
+  ac_cv_func_getpwnam_r=yes ac_cv_func_getpwuid_r=yes ac_cv_func_getgrgid_r=yes ac_cv_func_getgrnam_r=yes \
+  ac_cv_func_clock_gettime=yes ac_cv_func_mmap=yes ac_cv_func_strnlen=yes ac_cv_func_va_copy=yes \
+  ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes ac_cv_func_mblen=yes \
+  ac_cv_func_getpagesize=yes ac_cv_c___attribute__=yes \
+  ./configure --host="$HOST" --with-zlib="$DEPS_DIR/zlib" --with-ssl-dir="$DEPS_DIR/openssl" \
+  --disable-strip --disable-etc-default-login --disable-lastlog --disable-utmp --disable-utmpx \
+  --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline --disable-pkcs11
+$CC $CFLAGS -I. -c -o bsd-getifaddrs.o openbsd-compat/bsd-getifaddrs.c
+make -j$(nproc) LIBS="$(sed -n 's/^LIBS=//p' Makefile) $PWD/bsd-getifaddrs.o" ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
+for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
+  [ -f "$f" ] && $STRIP "$f" && cp "$f" "$GITHUB_WORKSPACE/artifacts/"
+done

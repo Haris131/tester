@@ -17,6 +17,7 @@ env:
   CURL_VERSION: 7.88.1
   HTTPING_VERSION: 3.5
   BASH_VERSION: 5.2.37
+  PHP_VERSION: 8.3.8
   CACHE_PREFIX: v1
 
 jobs:
@@ -78,10 +79,32 @@ jobs:
           add-to-path: false
           local-cache: true
 
-      - name: Fix NDK symlinks
+      - name: Export toolchain & matrix vars
         run: |
           NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}
           NDK_BIN=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin
+          echo "NDK_BIN=$NDK_BIN" >> $GITHUB_ENV
+          echo "NDK_ROOT=$NDK_ROOT" >> $GITHUB_ENV
+          echo "CC=$NDK_BIN/${{ matrix.cc_target }}-clang" >> $GITHUB_ENV
+          echo "AR=$NDK_BIN/llvm-ar" >> $GITHUB_ENV
+          echo "RANLIB=$NDK_BIN/llvm-ranlib" >> $GITHUB_ENV
+          echo "STRIP=$NDK_BIN/llvm-strip" >> $GITHUB_ENV
+          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -fPIE -fPIC" >> $GITHUB_ENV
+          echo "LDFLAGS=-fPIE -pie" >> $GITHUB_ENV
+          echo "DEPS_DIR=$GITHUB_WORKSPACE/deps/${{ matrix.cc_target }}" >> $GITHUB_ENV
+          echo "API=${{ matrix.api }}" >> $GITHUB_ENV
+          echo "ABI=${{ matrix.abi }}" >> $GITHUB_ENV
+          echo "HOST=${{ matrix.host }}" >> $GITHUB_ENV
+          echo "CC_TARGET=${{ matrix.cc_target }}" >> $GITHUB_ENV
+          echo "OPENSSL_TARGET=${{ matrix.openssl_target }}" >> $GITHUB_ENV
+          echo "OPENSSL_VERSION=${{ matrix.openssl_version }}" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.goarch }}" >> $GITHUB_ENV
+          echo "GOARM=${{ matrix.goarm }}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=libernet-tools-${{ matrix.cc_target }}" >> $GITHUB_ENV
+          echo "SCRIPTS_DIR=$GITHUB_WORKSPACE/scripts" >> $GITHUB_ENV
+
+      - name: Fix NDK symlinks
+        run: |
           for f in "$NDK_BIN"/*; do
             if [ -L "$f" ] && [ ! -e "$f" ]; then
               target=$(readlink "$f")
@@ -96,22 +119,8 @@ jobs:
               fi
             fi
           done
-          ln -sf ${{ matrix.cc_target }}-clang "$NDK_BIN/${{ matrix.host }}-clang" 2>/dev/null || true
-          ln -sf ${{ matrix.cc_target }}-clang++ "$NDK_BIN/${{ matrix.host }}-clang++" 2>/dev/null || true
-
-      - name: Export toolchain
-        run: |
-          NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}
-          NDK_BIN=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin
-          echo "NDK_BIN=$NDK_BIN" >> $GITHUB_ENV
-          echo "NDK_ROOT=$NDK_ROOT" >> $GITHUB_ENV
-          echo "CC=$NDK_BIN/${{ matrix.cc_target }}-clang" >> $GITHUB_ENV
-          echo "AR=$NDK_BIN/llvm-ar" >> $GITHUB_ENV
-          echo "RANLIB=$NDK_BIN/llvm-ranlib" >> $GITHUB_ENV
-          echo "STRIP=$NDK_BIN/llvm-strip" >> $GITHUB_ENV
-          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -fPIE -fPIC" >> $GITHUB_ENV
-          echo "LDFLAGS=-fPIE -pie" >> $GITHUB_ENV
-          echo "DEPS_DIR=$GITHUB_WORKSPACE/deps/${{ matrix.cc_target }}" >> $GITHUB_ENV
+          ln -sf $CC_TARGET-clang "$NDK_BIN/$HOST-clang" 2>/dev/null || true
+          ln -sf $CC_TARGET-clang++ "$NDK_BIN/$HOST-clang++" 2>/dev/null || true
 
       - name: Cache deps
         id: cache-deps
@@ -122,149 +131,35 @@ jobs:
 
       - name: Build zlib
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: |
-          wget -q https://github.com/madler/zlib/archive/refs/tags/v${{ env.ZLIB_VERSION }}.tar.gz -O zlib-${{ env.ZLIB_VERSION }}.tar.gz
-          tar xzf zlib-${{ env.ZLIB_VERSION }}.tar.gz
-          cd zlib-${{ env.ZLIB_VERSION }}
-          CHOST=${{ matrix.host }} \
-          CC="$CC" \
-          AR="$AR" \
-          RANLIB="$RANLIB" \
-          ./configure --prefix="$DEPS_DIR/zlib" --static
-          make -j$(nproc)
-          make install
+        run: bash $SCRIPTS_DIR/build-zlib.sh
 
       - name: Build OpenSSL ${{ matrix.openssl_version }}
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: |
-          wget -q https://www.openssl.org/source/openssl-${{ matrix.openssl_version }}.tar.gz
-          tar xzf openssl-${{ matrix.openssl_version }}.tar.gz
-          cd openssl-${{ matrix.openssl_version }}
-          export PATH="$NDK_BIN:$PATH"
-          export CC="$CC"
-          export AR="$AR"
-          export RANLIB="$RANLIB"
-          OPENSSL_OPTS="no-shared no-asm no-engine"
-          if [ "${{ matrix.openssl_version }}" = "1.1.1w" ]; then
-            OPENSSL_OPTS="$OPENSSL_OPTS no-hw"
-          fi
-          ./Configure ${{ matrix.openssl_target }} \
-            --prefix="$DEPS_DIR/openssl" \
-            $OPENSSL_OPTS \
-            -D__ANDROID_API__=${{ matrix.api }} \
-            -DOPENSSL_NO_SECURE_MEMORY
-          make -j$(nproc)
-          make install_sw
+        run: bash $SCRIPTS_DIR/build-openssl.sh
 
       - name: Build libyaml ${{ env.YAML_VERSION }}
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: |
-          wget -q https://github.com/yaml/libyaml/releases/download/${{ env.YAML_VERSION }}/yaml-${{ env.YAML_VERSION }}.tar.gz
-          tar xzf yaml-${{ env.YAML_VERSION }}.tar.gz
-          cd yaml-${{ env.YAML_VERSION }}
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" \
-            CFLAGS="$CFLAGS" \
-            --prefix="$DEPS_DIR/yaml" \
-            --disable-shared --enable-static
-          make -j$(nproc)
-          make install
+        run: bash $SCRIPTS_DIR/build-libyaml.sh
 
       - name: Build sshpass
         run: |
-          wget -q https://sourceforge.net/projects/sshpass/files/sshpass/1.10/sshpass-1.10.tar.gz
-          tar xzf sshpass-1.10.tar.gz
-          cd sshpass-1.10
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" \
-            CFLAGS="$CFLAGS" \
-            LDFLAGS="$LDFLAGS" \
-            ac_cv_func_malloc_0_nonnull=yes \
-            ac_cv_func_realloc_0_nonnull=yes
-          make -j$(nproc)
-          $STRIP sshpass
           mkdir -p $GITHUB_WORKSPACE/artifacts
-          cp sshpass $GITHUB_WORKSPACE/artifacts/
+          bash $SCRIPTS_DIR/build-sshpass.sh
 
-      - name: Install NSS/NSPR headers (needed by badvpn cmake)
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libnspr4-dev libnss3-dev
+      - name: Install NSS/NSPR headers
+        run: bash $SCRIPTS_DIR/install-nss-nspr.sh
 
       - name: Build badvpn-tun2socks
-        run: |
-          wget -q https://github.com/ambrop72/badvpn/archive/refs/tags/${{ env.BADVPN_VERSION }}.tar.gz -O badvpn.tar.gz
-          tar xzf badvpn.tar.gz
-          # Make badvpn detect Android as Linux (NDK sets CMAKE_SYSTEM_NAME=Android)
-          sed -i 's/elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")/elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Android")/' badvpn-${{ env.BADVPN_VERSION }}/CMakeLists.txt
-          # Android lacks librt; create empty stub so link_libraries(rt) doesn't fail
-          mkdir -p $DEPS_DIR
-          $AR rcs $DEPS_DIR/librt.a
-          cd badvpn-${{ env.BADVPN_VERSION }}
-          mkdir build && cd build
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.abi }} \
-            -DANDROID_PLATFORM=android-${{ matrix.api }} \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_NOTHING_BY_DEFAULT=1 \
-            -DBUILD_TUN2SOCKS=1 \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$DEPS_DIR"
-          make
-          TUN=$(find . -name "badvpn-tun2socks" -type f | head -1)
-          $STRIP "$TUN"
-          cp "$TUN" $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-badvpn-tun2socks.sh
 
       - name: Build jq
-        run: |
-          wget -q https://github.com/jqlang/jq/releases/download/jq-${{ env.JQ_VERSION }}/jq-${{ env.JQ_VERSION }}.tar.gz
-          tar xzf jq-${{ env.JQ_VERSION }}.tar.gz
-          cd jq-${{ env.JQ_VERSION }}
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-            --disable-docs --disable-maintainer-mode \
-            --disable-shared --enable-static \
-            --with-oniguruma=builtin
-          make -j$(nproc)
-          $STRIP jq
-          cp jq $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-jq.sh
 
       - name: Build curl
-        run: |
-          wget -q https://curl.se/download/curl-${{ env.CURL_VERSION }}.tar.gz
-          tar xzf curl-${{ env.CURL_VERSION }}.tar.gz
-          cd curl-${{ env.CURL_VERSION }}
-          export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
-          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib"
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-            --with-openssl="$DEPS_DIR/openssl" \
-            --with-zlib="$DEPS_DIR/zlib" \
-            --disable-shared --enable-static \
-            --disable-docs --disable-manual \
-            --without-brotli --without-zstd \
-            --without-libpsl \
-            --enable-ipv6 --enable-threaded-resolver
-          make -j$(nproc)
-          $STRIP src/curl
-          cp src/curl $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-curl.sh
 
       - name: Build httping
-        run: |
-          wget -q https://github.com/folkertvanheusden/httping/archive/refs/tags/v${{ env.HTTPING_VERSION }}.tar.gz -O httping-${{ env.HTTPING_VERSION }}.tar.gz
-          tar xzf httping-${{ env.HTTPING_VERSION }}.tar.gz
-          HTTPING_DIR=$(ls -d *${{ env.HTTPING_VERSION }}/ | head -1)
-          cd "$HTTPING_DIR"
-          touch makefile.inc
-          printf '%s\n' '#pragma once' '#define HAVE_SSL 1' '#define HAVE_OPENSSL 1' '#define VERSION "${{ env.HTTPING_VERSION }}"' > config.h
-          printf '%s\n' '#define gettext(s) s' '#define dgettext(d,s) s' '#define bindtextdomain(d,p)' '#define textdomain(d)' > libintl.h
-          printf '%s\n' '#include <openssl/engine.h>' 'void ENGINE_cleanup(void) {}' > stub-engine.c
-          export CFLAGS="$CFLAGS -I. -I$DEPS_DIR/openssl/include"
-          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -lssl -lcrypto -lz -ldl ./stub-engine.o"
-          $CC $CFLAGS -c -o stub-engine.o stub-engine.c
-          make CC="$CC" NO_GETTEXT=yes SSL=yes -j$(nproc)
-          $STRIP httping
-          cp httping $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-httping.sh
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -272,260 +167,37 @@ jobs:
           go-version: '1.22'
 
       - name: Build bash
-        run: |
-          wget -q https://ftp.gnu.org/gnu/bash/bash-${{ env.BASH_VERSION }}.tar.gz
-          tar xzf bash-${{ env.BASH_VERSION }}.tar.gz
-          cd bash-${{ env.BASH_VERSION }}
-          # Bionic headers declare functions that don't exist before certain API levels
-          export ac_cv_func_dprintf=yes
-          # mkfifo not in Bionic < API 21; tell configure it exists so bash doesn't redefine it
-          export ac_cv_func_mkfifo=yes
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-            --disable-shared --enable-static \
-            --without-bash-malloc \
-            --disable-readline --disable-history \
-            --disable-progcomp --disable-nls
-          # Remove bash's dprintf declaration (conflicts with Bionic's int dprintf)
-          sed -i '/extern void dprintf/d' externs.h
-          # Bionic < API 26 lacks mblen, mbtowc, etc. — provide stubs using mbr* equivalents
-          cat > mb-stub.c << 'MBEOF'
-          #include <stddef.h>
-          #include <wchar.h>
-          #include <string.h>
-          static mbstate_t _mbst;
-          int mblen(const char *s, size_t n) {
-            if (s == NULL) { memset(&_mbst, 0, sizeof(_mbst)); return 0; }
-            return mbrlen(s, n, &_mbst);
-          }
-          int mbtowc(wchar_t *pwc, const char *s, size_t n) {
-            if (s == NULL) { memset(&_mbst, 0, sizeof(_mbst)); return 0; }
-            size_t r = mbrtowc(pwc, s, n, &_mbst);
-            return (r == (size_t)-1 || r == (size_t)-2) ? -1 : (int)r;
-          }
-          int wctomb(char *s, wchar_t wc) {
-            if (s == NULL) { memset(&_mbst, 0, sizeof(_mbst)); return 0; }
-            size_t r = wcrtomb(s, wc, &_mbst);
-            return (r == (size_t)-1) ? -1 : (int)r;
-          }
-          size_t mbstowcs(wchar_t *pwcs, const char *s, size_t n) {
-            mbstate_t st = _mbst;
-            return mbsrtowcs(pwcs, (const char **)&s, n, &st);
-          }
-          size_t wcstombs(char *s, const wchar_t *pwcs, size_t n) {
-            mbstate_t st = _mbst;
-            return wcsrtombs(s, (const wchar_t **)&pwcs, n, &st);
-          }
-          MBEOF
-          $CC $CFLAGS -c -o mb-stub.o mb-stub.c
-          make -j$(nproc) LDFLAGS+=" mb-stub.o"
-          $STRIP bash
-          cp bash $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-bash.sh
 
       - name: Build dnstt-client
-        run: |
-          git clone --depth=1 https://github.com/Haris131/dnstt.git
-          cd dnstt
-          GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-          CGO_ENABLED=1 GOOS=android CC="$CC" \
-          go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/dnstt-client ./dnstt-client
+        run: bash $SCRIPTS_DIR/build-dnstt-client.sh
 
       - name: Build go-tcp-proxy-tunnel
-        run: |
-          git clone --depth=1 https://github.com/lutfailham96/go-tcp-proxy-tunnel.git
-          cd go-tcp-proxy-tunnel
-          GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-          CGO_ENABLED=1 GOOS=android CC="$CC" \
-          go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/go-tcp-proxy-tunnel ./cmd/tcp-proxy-tunnel/main.go
+        run: bash $SCRIPTS_DIR/build-go-tcp-proxy-tunnel.sh
 
       - name: Build corkscrew
-        run: |
-          wget -q https://deb.debian.org/debian/pool/main/c/corkscrew/corkscrew_2.0.orig.tar.gz -O corkscrew-2.0.tar.gz 2>&1 || \
-          wget -q http://ftp.debian.org/debian/pool/main/c/corkscrew/corkscrew_2.0.orig.tar.gz -O corkscrew-2.0.tar.gz 2>&1 || \
-          wget -q http://corkscrew.agroman.net/corkscrew-2.0.tar.gz -O corkscrew-2.0.tar.gz 2>&1
-          tar xzf corkscrew-2.0.tar.gz
-          cd corkscrew-2.0
-          CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-          ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes \
-          ./configure --host=${{ matrix.host }}
-          make -j$(nproc)
-          $STRIP corkscrew
-          cp corkscrew $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-corkscrew.sh
 
       - name: Build OpenSSH client
-        run: |
-          curl -fSL -o openssh-${{ env.SSH_VERSION }}.tar.gz \
-            https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz || \
-          curl -fSL -o openssh-${{ env.SSH_VERSION }}.tar.gz \
-            https://cloudflare.cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz || \
-          curl -fSL -o openssh-${{ env.SSH_VERSION }}.tar.gz \
-            https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
-          tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
-          cd openssh-${{ env.SSH_VERSION }}
-           # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
-            printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
-           sed -i 's|^bzero(void \*b, size_t n)|#ifdef bzero\n#undef bzero\n#endif\nbzero(void *b, size_t n)|' openbsd-compat/bsd-misc.c
-            # Provide getifaddrs stub for API < 24 (Android lacks this before API 24)
-            printf '%s\n' '#include "includes.h"' \
-              '#if defined(__ANDROID_API__) && __ANDROID_API__ < 24' \
-              '#include <errno.h>' \
-              '#include <sys/socket.h>' \
-              'struct ifaddrs {' \
-              '    struct ifaddrs *ifa_next;' \
-              '    char *ifa_name;' \
-              '    unsigned int ifa_flags;' \
-              '    struct sockaddr *ifa_addr;' \
-              '    struct sockaddr *ifa_netmask;' \
-              '    struct sockaddr *ifa_dstaddr;' \
-              '    void *ifa_data;' \
-              '};' \
-              'int getifaddrs(struct ifaddrs **ifap) {' \
-              '    *ifap = NULL;' \
-              '    errno = ENOSYS;' \
-              '    return -1;' \
-              '}' \
-              'void freeifaddrs(struct ifaddrs *ifa) {' \
-              '    (void)ifa;' \
-              '}' \
-              '#endif' > openbsd-compat/bsd-getifaddrs.c
-            export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
-           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
-           export LIBS="-ldl"
-           CC="$CC" \
-           CFLAGS="$CFLAGS" \
-           LDFLAGS="$LDFLAGS" \
-           LIBS="$LIBS" \
-           ac_cv_func_getaddrinfo=yes \
-           ac_cv_have_int64_t=yes \
-           ac_cv_have_u_int64_t=yes \
-           ac_cv_have_uint64_t=yes \
-           ac_cv_func_getpwnam_r=yes \
-           ac_cv_func_getpwuid_r=yes \
-           ac_cv_func_getgrgid_r=yes \
-           ac_cv_func_getgrnam_r=yes \
-           ac_cv_func_clock_gettime=yes \
-           ac_cv_func_mmap=yes \
-           ac_cv_func_strnlen=yes \
-           ac_cv_func_va_copy=yes \
-           ac_cv_func_malloc_0_nonnull=yes \
-           ac_cv_func_realloc_0_nonnull=yes \
-           ac_cv_func_mblen=yes \
-            ac_cv_func_getpagesize=yes \
-            ac_cv_c___attribute__=yes \
-            ./configure --host=${{ matrix.host }} \
-             --with-zlib="$DEPS_DIR/zlib" \
-             --with-ssl-dir="$DEPS_DIR/openssl" \
-             --disable-strip \
-             --disable-etc-default-login \
-             --disable-lastlog \
-             --disable-utmp \
-             --disable-utmpx \
-             --disable-wtmp \
-             --disable-wtmpx \
-             --disable-pututline \
-             --disable-pututxline \
-               --disable-pkcs11
-            # Compile getifaddrs stub and add to link via LIBS override
-            $CC $CFLAGS -I. -c -o bsd-getifaddrs.o openbsd-compat/bsd-getifaddrs.c
-            make -j$(nproc) LIBS="$(sed -n 's/^LIBS=//p' Makefile) $PWD/bsd-getifaddrs.o" ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign
-          for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
-            [ -f "$f" ] && $STRIP "$f" && cp "$f" $GITHUB_WORKSPACE/artifacts/
-          done
+        run: bash $SCRIPTS_DIR/build-openssh.sh
 
       - name: Build stunnel
-        run: |
-          curl -fSL -o stunnel-${{ env.STUNNEL_VERSION }}.tar.gz \
-            https://www.stunnel.org/downloads/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz || \
-          curl -fSL -o stunnel-${{ env.STUNNEL_VERSION }}.tar.gz \
-            https://www.usenix.org.uk/mirrors/stunnel/archive/5.x/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz || \
-          curl -fSL -o stunnel-${{ env.STUNNEL_VERSION }}.tar.gz \
-            https://fossies.org/linux/misc/stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
-          tar xzf stunnel-${{ env.STUNNEL_VERSION }}.tar.gz
-          cd stunnel-${{ env.STUNNEL_VERSION }}
-          export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include"
-          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -ldl"
-          ./configure --host=${{ matrix.host }} \
-            CC="$CC" \
-            CFLAGS="$CFLAGS" \
-            LDFLAGS="$LDFLAGS" \
-            --with-ssl="$DEPS_DIR/openssl" \
-            --disable-systemd \
-            --disable-fips \
-            ac_cv_func_malloc_0_nonnull=yes \
-            ac_cv_func_realloc_0_nonnull=yes
-          make -j$(nproc)
-          $STRIP src/stunnel
-          cp src/stunnel $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-stunnel.sh
 
-      - name: Build tun2socks-udprelay (FH0/badvpn fork)
-        run: |
-          git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
-          cd badvpn-udprelay
-          mkdir -p jni
-          sed 's|LOCAL_PATH := \$(call my-dir)|LOCAL_PATH := $(call my-dir)/..|' Android.mk > jni/Android.mk
-          cp Application.mk jni/
-          $NDK_ROOT/ndk-build NDK_PROJECT_PATH=. \
-            APP_ABI=${{ matrix.abi }} \
-            APP_PLATFORM=android-${{ matrix.api }}
-          find obj -name "tun2socks" -type f -exec $STRIP {} \; -exec mv {} $GITHUB_WORKSPACE/artifacts/badvpn-tun2socks-udprelay \;
+      - name: Build tun2socks-udprelay
+        run: bash $SCRIPTS_DIR/build-tun2socks-udprelay.sh
 
       - name: Build stubby
-        run: |
-          git clone --depth 1 --branch ${{ env.GETDNS_VERSION }} --recurse-submodules https://github.com/getdnsapi/getdns.git getdns-${{ env.GETDNS_VERSION }}
-          # Build bsd_signal stub (Android doesn't have bsd_signal)
-          cat > bsd_signal_stub.c << 'EOF'
-          #include <signal.h>
-          void (*bsd_signal(int sig, void (*func)(int)))(int) {
-              return signal(sig, func);
-          }
-          EOF
-          $CC -c -o bsd_signal_stub.o bsd_signal_stub.c
-          $AR rcs libbsd_signal_stub.a bsd_signal_stub.o
-          cd getdns-${{ env.GETDNS_VERSION }}
-          mkdir build && cd build
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.abi }} \
-            -DANDROID_PLATFORM=android-${{ matrix.api }} \
-            -DANDROID_STL=none \
-            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/stubby-build \
-            -DBUILD_STUBBY=ON \
-            -DENABLE_STUB_ONLY=ON \
-            -DBUILD_TESTING=OFF \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DOPENSSL_ROOT_DIR=$DEPS_DIR/openssl \
-            -DOPENSSL_INCLUDE_DIR=$DEPS_DIR/openssl/include \
-            -DOPENSSL_CRYPTO_LIBRARY=$DEPS_DIR/openssl/lib/libcrypto.a \
-            -DOPENSSL_SSL_LIBRARY=$DEPS_DIR/openssl/lib/libssl.a \
-            -DYAML_LIBRARY=$DEPS_DIR/yaml/lib/libyaml.a \
-            -DYAML_INCLUDE_DIR=$DEPS_DIR/yaml/include \
-            -DUSE_LIBIDN2=OFF \
-            -DHAVE_DSA_SIG_SET0=1 \
-            -DHAVE_DSA_SET0_PQG=1 \
-            -DHAVE_DSA_SET0_KEY=1 \
-            -DHAVE_RSA_SET0_KEY=1 \
-            -DHAVE_EVP_MD_CTX_NEW=1 \
-            -DHAVE_EVP_DIGESTVERIFY=1 \
-            -DHAVE_HMAC_CTX_NEW=1 \
-            -DHAVE_OPENSSL_VERSION_NUM=1 \
-            -DHAVE_OPENSSL_VERSION=1 \
-            -DHAVE_SSL_CTX_SET_CIPHERSUITES=1 \
-            -DHAVE_SSL_SET_CIPHERSUITES=1 \
-            -DCMAKE_EXE_LINKER_FLAGS="-fPIE -pie -ldl $GITHUB_WORKSPACE/libbsd_signal_stub.a" \
-            -DCMAKE_FIND_ROOT_PATH="$DEPS_DIR/openssl;$DEPS_DIR/yaml"
-          make -j$(nproc)
-          make install
-          $STRIP $GITHUB_WORKSPACE/stubby-build/bin/stubby
-          cp $GITHUB_WORKSPACE/stubby-build/bin/stubby $GITHUB_WORKSPACE/artifacts/
+        run: bash $SCRIPTS_DIR/build-stubby.sh
+
+      - name: Build php8
+        run: bash $SCRIPTS_DIR/build-php8.sh
 
       - name: Package
-        run: |
-          cd $GITHUB_WORKSPACE/artifacts
-          ls -lh
-          tar czf $GITHUB_WORKSPACE/libernet-tools-${{ matrix.cc_target }}.tar.gz *
+        run: bash $SCRIPTS_DIR/package.sh
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: libernet-tools-${{ matrix.cc_target }}
-          path: libernet-tools-${{ matrix.cc_target }}.tar.gz
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_NAME }}.tar.gz
