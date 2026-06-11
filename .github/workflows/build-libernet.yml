@@ -28,30 +28,40 @@ jobs:
             openssl_target: linux-armv4
             openssl_version: 1.1.1w
             host: arm-linux-androideabi
+            goarch: arm
+            goarm: 7
           - api: 21
             abi: armeabi-v7a
             cc_target: armv7a-linux-androideabi21
             openssl_target: linux-armv4
             openssl_version: 1.1.1w
             host: arm-linux-androideabi
+            goarch: arm
+            goarm: 7
           - api: 21
             abi: arm64-v8a
             cc_target: aarch64-linux-android21
             openssl_target: linux-aarch64
             openssl_version: 1.1.1w
             host: aarch64-linux-android
+            goarch: arm64
+            goarm: ''
           - api: 24
             abi: armeabi-v7a
             cc_target: armv7a-linux-androideabi24
             openssl_target: linux-armv4
             openssl_version: 3.6.3
             host: arm-linux-androideabi
+            goarch: arm
+            goarm: 7
           - api: 24
             abi: arm64-v8a
             cc_target: aarch64-linux-android24
             openssl_target: linux-aarch64
             openssl_version: 3.6.3
             host: aarch64-linux-android
+            goarch: arm64
+            goarm: ''
 
     steps:
       - uses: actions/checkout@v4
@@ -200,6 +210,114 @@ jobs:
           TUN=$(find . -name "badvpn-tun2socks" -type f | head -1)
           $STRIP "$TUN"
           cp "$TUN" $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build jq
+        run: |
+          JQ_VER=1.8.1
+          wget -q https://github.com/jqlang/jq/releases/download/jq-${JQ_VER}/jq-${JQ_VER}.tar.gz
+          tar xzf jq-${JQ_VER}.tar.gz
+          cd jq-${JQ_VER}
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+            --disable-docs --disable-maintainer-mode \
+            --with-oniguruma=builtin
+          make -j$(nproc)
+          $STRIP jq
+          cp jq $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build curl
+        run: |
+          CURL_VER=8.20.0
+          wget -q https://curl.se/download/curl-${CURL_VER}.tar.gz
+          tar xzf curl-${CURL_VER}.tar.gz
+          cd curl-${CURL_VER}
+          export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib"
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+            --with-openssl="$DEPS_DIR/openssl" \
+            --with-zlib="$DEPS_DIR/zlib" \
+            --disable-shared --enable-static \
+            --disable-docs --disable-manual \
+            --without-brotli --without-zstd \
+            --enable-ipv6 --enable-threaded-resolver
+          make -j$(nproc)
+          $STRIP src/curl
+          cp src/curl $GITHUB_WORKSPACE/artifacts/
+
+      - name: Build httping
+        run: |
+          HTTPING_VER=3.5
+          wget -q https://github.com/folkertvanheusden/httping/archive/refs/tags/v${HTTPING_VER}.tar.gz -O httping-${HTTPING_VER}.tar.gz
+          tar xzf httping-${HTTPING_VER}.tar.gz
+          cd httping-${HTTPING_VER}
+          make CC="$CC" \
+            CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include" \
+            LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib" \
+            LIBS="-lssl -lcrypto -lz -ldl" \
+            -j$(nproc) httping
+          $STRIP httping
+          cp httping $GITHUB_WORKSPACE/artifacts/
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build dnstt-client
+        run: |
+          git clone --depth=1 https://github.com/Haris131/dnstt.git
+          cd dnstt
+          GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
+          CGO_ENABLED=0 GOOS=android \
+          go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/dnstt-client ./dnstt-client
+
+      - name: Build go-tcp-proxy-tunnel
+        run: |
+          git clone --depth=1 https://github.com/lutfailham96/go-tcp-proxy-tunnel.git
+          cd go-tcp-proxy-tunnel
+          GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
+          CGO_ENABLED=0 GOOS=android \
+          go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/go-tcp-proxy-tunnel ./cmd/tcp-proxy-tunnel/main.go
+
+      - name: Build php8
+        continue-on-error: true
+        run: |
+          PHP_VER=8.3.8
+          wget -q https://www.php.net/distributions/php-${PHP_VER}.tar.gz
+          tar xzf php-${PHP_VER}.tar.gz
+          cd php-${PHP_VER}
+          export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include"
+          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib"
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+            --disable-all --disable-cgi --disable-phpdbg \
+            --without-pear --enable-sockets --enable-pcntl \
+            --with-openssl="$DEPS_DIR/openssl" \
+            --with-zlib="$DEPS_DIR/zlib" \
+            --with-config-file-scan-dir=/data/data/com.termux/files/usr/etc/php.d
+          make -j$(nproc)
+          $STRIP sapi/cli/php || true
+          cp sapi/cli/php $GITHUB_WORKSPACE/artifacts/php8 2>/dev/null || true
+
+      - name: Build python3
+        continue-on-error: true
+        run: |
+          PY_VER=3.12.4
+          wget -q https://www.python.org/ftp/python/${PY_VER}/Python-${PY_VER}.tar.xz
+          tar xf Python-${PY_VER}.tar.xz
+          cd Python-${PY_VER}
+          export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include"
+          export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib"
+          ./configure --host=${{ matrix.host }} \
+            CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+            --build=x86_64-linux-gnu \
+            --disable-ipv6 \
+            ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no \
+            ac_cv_func_accept=yes
+          make -j$(nproc) || true
+          $STRIP python || true
+          cp python $GITHUB_WORKSPACE/artifacts/python3 2>/dev/null || true
 
       - name: Build corkscrew
         run: |
