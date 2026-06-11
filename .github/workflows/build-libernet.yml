@@ -93,7 +93,7 @@ jobs:
           echo "AR=$NDK_BIN/llvm-ar" >> $GITHUB_ENV
           echo "RANLIB=$NDK_BIN/llvm-ranlib" >> $GITHUB_ENV
           echo "STRIP=$NDK_BIN/llvm-strip" >> $GITHUB_ENV
-          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -fPIE -fPIC" >> $GITHUB_ENV
+          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -D__bionic_bzero=__bionic_bzero -fPIE -fPIC" >> $GITHUB_ENV
           echo "LDFLAGS=-fPIE -pie" >> $GITHUB_ENV
           echo "DEPS_DIR=$GITHUB_WORKSPACE/deps/${{ matrix.cc_target }}" >> $GITHUB_ENV
 
@@ -200,10 +200,10 @@ jobs:
           curl -fSL -o openssh-${{ env.SSH_VERSION }}.tar.gz \
             https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${{ env.SSH_VERSION }}.tar.gz
           tar xzf openssh-${{ env.SSH_VERSION }}.tar.gz
-            cd openssh-${{ env.SSH_VERSION }}
+          cd openssh-${{ env.SSH_VERSION }}
            # Replace getrrsetbyname.c with stub (Android lacks BSD resolver internals)
            printf '%s\n' '#include "includes.h"' '#if !defined(HAVE_GETRRSETBYNAME) && !defined(HAVE_LDNS)' '#include "getrrsetbyname.h"' 'int getrrsetbyname(const char *hostname, unsigned int rdclass, unsigned int rdtype, unsigned int flags, struct rrsetinfo **res) { return ERRSET_FAIL; }' 'void freerrset(struct rrsetinfo *rrset) { /* no-op */ }' '#endif' > openbsd-compat/getrrsetbyname.c
-           export CFLAGS="$CFLAGS -D__sentinel__=__sentinel__ -D__bounded__=__bounded__ -D__nonnull__=__nonnull__ -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
+           export CFLAGS="$CFLAGS -D__bionic_bzero=__bionic_bzero -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
            export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib -ldl"
            export LIBS="-ldl"
            CC="$CC" \
@@ -225,10 +225,8 @@ jobs:
            ac_cv_func_malloc_0_nonnull=yes \
            ac_cv_func_realloc_0_nonnull=yes \
            ac_cv_func_mblen=yes \
-           ac_cv_func_closefrom=yes \
            ac_cv_func_getpagesize=yes \
            ac_cv_c___attribute__=yes \
-           ac_cv_func_bzero=yes \
            ./configure --host=${{ matrix.host }} \
              --with-zlib="$DEPS_DIR/zlib" \
              --with-ssl-dir="$DEPS_DIR/openssl" \
