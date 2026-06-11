@@ -341,7 +341,6 @@ jobs:
           go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/go-tcp-proxy-tunnel ./cmd/tcp-proxy-tunnel/main.go
 
       - name: Build php8
-        continue-on-error: true
         run: |
           PHP_VER=${{ env.PHP_VERSION }}
           wget -q https://www.php.net/distributions/php-${PHP_VER}.tar.gz
@@ -361,7 +360,6 @@ jobs:
           cp sapi/cli/php $GITHUB_WORKSPACE/artifacts/php8 2>/dev/null || true
 
       - name: Build python3
-        continue-on-error: true
         run: |
           PY_VER=${{ env.PYTHON_VERSION }}
           wget -q https://www.python.org/ftp/python/${PY_VER}/Python-${PY_VER}.tar.xz
@@ -499,7 +497,6 @@ jobs:
           cp src/stunnel $GITHUB_WORKSPACE/artifacts/
 
       - name: Build tun2socks-udprelay (FH0/badvpn fork)
-        continue-on-error: true
         run: |
           git clone --depth=1 https://github.com/FH0/badvpn.git badvpn-udprelay
           cd badvpn-udprelay
