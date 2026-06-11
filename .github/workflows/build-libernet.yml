@@ -278,9 +278,10 @@ jobs:
           wget -q https://ftp.gnu.org/gnu/bash/bash-${{ env.BASH_VERSION }}.tar.gz
           tar xzf bash-${{ env.BASH_VERSION }}.tar.gz
           cd bash-${{ env.BASH_VERSION }}
-          # Android Bionic declares int dprintf() unconditionally in <stdio.h>,
-          # but bash declares void dprintf() causing conflicting types error
+          # Bionic headers declare functions that don't exist before certain API levels
           export ac_cv_func_dprintf=yes
+          # mkfifo not in Bionic < API 21; tell configure it exists so bash doesn't redefine it
+          export ac_cv_func_mkfifo=yes
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --disable-shared --enable-static \
@@ -310,7 +311,7 @@ jobs:
           git clone --depth=1 https://github.com/Haris131/dnstt.git
           cd dnstt
           GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-          CGO_ENABLED=0 GOOS=android \
+          CGO_ENABLED=1 GOOS=android CC="$CC" \
           go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/dnstt-client ./dnstt-client
 
       - name: Build go-tcp-proxy-tunnel
@@ -318,7 +319,7 @@ jobs:
           git clone --depth=1 https://github.com/lutfailham96/go-tcp-proxy-tunnel.git
           cd go-tcp-proxy-tunnel
           GOARCH=${{ matrix.goarch }} GOARM=${{ matrix.goarm }} \
-          CGO_ENABLED=0 GOOS=android \
+          CGO_ENABLED=1 GOOS=android CC="$CC" \
           go build -ldflags="-w -s" -o $GITHUB_WORKSPACE/artifacts/go-tcp-proxy-tunnel ./cmd/tcp-proxy-tunnel/main.go
 
       - name: Build php8
