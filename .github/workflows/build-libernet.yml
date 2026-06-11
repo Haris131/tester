@@ -251,12 +251,17 @@ jobs:
         run: |
           HTTPING_VER=3.5
           wget -q https://github.com/folkertvanheusden/httping/archive/refs/tags/v${HTTPING_VER}.tar.gz -O httping-${HTTPING_VER}.tar.gz
-          HTTPING_DIR=$(tar tzf httping-${HTTPING_VER}.tar.gz | head -1 | cut -d/ -f1)
           tar xzf httping-${HTTPING_VER}.tar.gz
+          HTTPING_DIR=$(ls -d httping*/)
           cd "$HTTPING_DIR"
           export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include"
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib"
-          autoreconf -fi
+          if [ ! -f configure ]; then
+            if [ -f configure.in ]; then
+              mv configure.in configure.ac
+            fi
+            autoreconf -fi
+          fi
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --with-ssl="$DEPS_DIR/openssl"
