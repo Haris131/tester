@@ -252,7 +252,7 @@ jobs:
           HTTPING_VER=3.5
           wget -q https://github.com/folkertvanheusden/httping/archive/refs/tags/v${HTTPING_VER}.tar.gz -O httping-${HTTPING_VER}.tar.gz
           tar xzf httping-${HTTPING_VER}.tar.gz
-          HTTPING_DIR=$(ls -d httping*/)
+          HTTPING_DIR=$(ls -d *${HTTPING_VER}/ | head -1)
           cd "$HTTPING_DIR"
           export CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include"
           export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib"
