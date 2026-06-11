@@ -163,6 +163,11 @@ jobs:
           make -j$(nproc)
           make install
 
+      - name: Setup native Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Build python3
         run: |
           PY_VER=${{ env.PYTHON_VERSION }}
@@ -174,6 +179,7 @@ jobs:
           ./configure --host=${{ matrix.host }} \
             CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
             --build=x86_64-linux-gnu \
+            --with-build-python=$(which python3) \
             --disable-ipv6 \
             ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no \
             ac_cv_func_accept=yes

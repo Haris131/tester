@@ -185,12 +185,14 @@ jobs:
           #include <wchar.h>
           #include <string.h>
           #include <unistd.h>
+          #include <locale.h>
           int mblen(const char *s, size_t n) {
             static mbstate_t _ms;
             if (!s) { memset(&_ms, 0, sizeof(_ms)); return 0; }
             return mbrlen(s, n, &_ms);
           }
           int getdtablesize(void) { return sysconf(_SC_OPEN_MAX); }
+          struct lconv *localeconv(void) { static struct lconv _lc; return &_lc; }
           void zif_dns_get_record(void *d, void *rv) { }
           void zif_dns_get_mx(void *d, void *rv) { }
           STUBEOF
