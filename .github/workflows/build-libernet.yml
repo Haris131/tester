@@ -228,7 +228,7 @@ jobs:
 
       - name: Build curl
         run: |
-          CURL_VER=8.20.0
+          CURL_VER=7.88.1
           wget -q https://curl.se/download/curl-${CURL_VER}.tar.gz
           tar xzf curl-${CURL_VER}.tar.gz
           cd curl-${CURL_VER}
@@ -241,6 +241,7 @@ jobs:
             --disable-shared --enable-static \
             --disable-docs --disable-manual \
             --without-brotli --without-zstd \
+            --without-libpsl \
             --enable-ipv6 --enable-threaded-resolver
           make -j$(nproc)
           $STRIP src/curl
