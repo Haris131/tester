@@ -69,7 +69,7 @@ jobs:
             goarm: ''
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -124,7 +124,7 @@ jobs:
 
       - name: Cache deps
         id: cache-deps
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: deps/${{ matrix.cc_target }}
           key: ${{ env.CACHE_PREFIX }}-deps-${{ matrix.openssl_version }}-${{ matrix.cc_target }}
@@ -162,9 +162,10 @@ jobs:
         run: bash $SCRIPTS_DIR/build-httping.sh
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.22'
+          cache: false
 
       - name: Build bash
         run: bash $SCRIPTS_DIR/build-bash.sh
@@ -197,7 +198,7 @@ jobs:
         run: bash $SCRIPTS_DIR/package.sh
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}.tar.gz
