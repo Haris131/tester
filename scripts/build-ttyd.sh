@@ -43,7 +43,7 @@ build_cmake_dep libwebsockets \
   "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz" \
   "libwebsockets-4.3.3" \
   "$DEPS_DIR/lws" \
-  "-DLWS_WITH_SSL=OFF -DLWS_WITH_ZLIB=OFF -DLWS_WITH_CLIENT=ON -DLWS_WITHOUT_TESTAPPS=ON -DLWS_STATIC_PIC=ON -DLWS_WITH_SHARED=OFF"
+  "-DLWS_WITH_SSL=OFF -DLWS_WITH_ZLIB=OFF -DLWS_WITH_CLIENT=ON -DLWS_WITHOUT_TESTAPPS=ON -DLWS_STATIC_PIC=ON -DLWS_WITH_SHARED=OFF -DLWS_WITH_LIBUV=ON -DCMAKE_FIND_ROOT_PATH=$DEPS_DIR/libuv"
 
 # ttyd
 git clone --depth=1 https://github.com/tsl0922/ttyd.git
