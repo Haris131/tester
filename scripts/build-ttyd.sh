@@ -24,7 +24,7 @@ build_cmake_dep() {
 # libuv (autotools, not cmake)
 wget -q "https://dist.libuv.org/dist/v1.48.0/libuv-v1.48.0-dist.tar.gz"
 tar xzf libuv-v1.48.0-dist.tar.gz
-cd libuv-v1.48.0
+cd "$(tar tf libuv-v1.48.0-dist.tar.gz | head -1 | cut -d/ -f1)"
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --prefix="$DEPS_DIR/libuv" --disable-shared --enable-static
 make -j$(nproc)
