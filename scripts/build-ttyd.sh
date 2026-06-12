@@ -25,15 +25,28 @@ build_cmake_dep() {
 wget -q "https://dist.libuv.org/dist/v1.48.0/libuv-v1.48.0-dist.tar.gz"
 tar xzf libuv-v1.48.0-dist.tar.gz
 cd "$(tar tf libuv-v1.48.0-dist.tar.gz | head -1 | cut -d/ -f1)"
-UV_EXTRA_CONF=
+
+# libuv does NOT use autoconf to detect preadv/pwritev — it has a hardcoded
+# platform #if in src/unix/fs.c. Android isn't in that list, so preadv/pwritev
+# are called directly even when unavailable (API < 24). Fix: add Android API
+# level check to the existing fallback macro condition.
+sed -i '/^#if defined(__CYGWIN__)/a\    (defined(__ANDROID__) \&\& __ANDROID_API__ < 24) || \\' \
+  src/unix/fs.c
+
+# For Android API < 21: inotify_init1 and pipe2 are not available.
+# libuv uses them directly (inotify_init1 in linux.c, pipe2 in pipe.c)
+# with no autoconf guards. Patch source as needed.
 if [ "$API" -lt 21 ]; then
-  UV_EXTRA_CONF="$UV_EXTRA_CONF ac_cv_func_inotify_init1=no ac_cv_func_pipe2=no"
+  # Replace inotify_init1 with inotify_init + fcntl
+  sed -i 's/fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);/fd = inotify_init();/' src/unix/linux.c
+  sed -i '/^  fd = inotify_init();$/a\  if (fd >= 0) {\n    (void)fcntl(fd, F_SETFL, O_NONBLOCK);\n    (void)fcntl(fd, F_SETFD, FD_CLOEXEC);\n  }' src/unix/linux.c
+
+  # Replace pipe2 with pipe + uv__cloexec + uv__nonblock (same pattern as #else branch)
+  sed -i 's/#if defined(__FreeBSD__) || defined(__linux__)/#if defined(__FreeBSD__) || (defined(__linux__) \&\& !(defined(__ANDROID__) \&\& __ANDROID_API__ < 21))/' src/unix/pipe.c
 fi
-if [ "$API" -lt 24 ]; then
-  UV_EXTRA_CONF="$UV_EXTRA_CONF ac_cv_func_preadv=no ac_cv_func_pwritev=no"
-fi
+
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-  --prefix="$DEPS_DIR/libuv" --disable-shared --enable-static $UV_EXTRA_CONF
+  --prefix="$DEPS_DIR/libuv" --disable-shared --enable-static
 make -j$(nproc)
 make install
 cd "$GITHUB_WORKSPACE"
