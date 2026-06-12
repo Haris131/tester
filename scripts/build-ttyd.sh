@@ -79,9 +79,19 @@ if [ "$API" -lt 21 ]; then
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pthread.h>
+#include <time.h>
+#include <sys/syscall.h>
 
 #ifndef EPOLL_CLOEXEC
 #define EPOLL_CLOEXEC 02000000
+#endif
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC O_CLOEXEC
+#endif
+#ifndef SOCK_NONBLOCK
+#define SOCK_NONBLOCK O_NONBLOCK
 #endif
 
 int epoll_create1(int flags) {
@@ -118,6 +128,39 @@ int recvmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int
   }
   return received;
 }
+
+int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+  int fd = accept(sockfd, addr, addrlen);
+  if (fd < 0) return -1;
+  if (flags & SOCK_CLOEXEC) fcntl(fd, F_SETFD, FD_CLOEXEC);
+  if (flags & SOCK_NONBLOCK) {
+    int fl = fcntl(fd, F_GETFL);
+    if (fl >= 0) fcntl(fd, F_SETFL, fl | O_NONBLOCK);
+  }
+  return fd;
+}
+
+int dup3(int oldfd, int newfd, int flags) {
+  int fd = dup2(oldfd, newfd);
+  if (fd < 0) return -1;
+  if (flags & O_CLOEXEC) fcntl(fd, F_SETFD, FD_CLOEXEC);
+  return fd;
+}
+
+pid_t pthread_gettid_np(pthread_t thread) {
+  (void)thread;
+#ifdef __NR_gettid
+  return (pid_t)syscall(__NR_gettid);
+#else
+  return (pid_t)gettid();
+#endif
+}
+
+int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id) {
+  (void)attr;
+  (void)clock_id;
+  return 0;
+}
 #endif
 COMPAT19
   $CC -c -fPIC libuv_compat_19.c -o libuv_compat_19.o
@@ -141,6 +184,7 @@ if [ "$API" -lt 23 ]; then
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <errno.h>
 
 /* Android NDK r23b: openpty and forkpty both require API 23+.
