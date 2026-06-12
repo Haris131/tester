@@ -25,8 +25,15 @@ build_cmake_dep() {
 wget -q "https://dist.libuv.org/dist/v1.48.0/libuv-v1.48.0-dist.tar.gz"
 tar xzf libuv-v1.48.0-dist.tar.gz
 cd "$(tar tf libuv-v1.48.0-dist.tar.gz | head -1 | cut -d/ -f1)"
+UV_EXTRA_CONF=
+if [ "$API" -lt 21 ]; then
+  UV_EXTRA_CONF="$UV_EXTRA_CONF ac_cv_func_inotify_init1=no ac_cv_func_pipe2=no"
+fi
+if [ "$API" -lt 24 ]; then
+  UV_EXTRA_CONF="$UV_EXTRA_CONF ac_cv_func_preadv=no ac_cv_func_pwritev=no"
+fi
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-  --prefix="$DEPS_DIR/libuv" --disable-shared --enable-static
+  --prefix="$DEPS_DIR/libuv" --disable-shared --enable-static $UV_EXTRA_CONF
 make -j$(nproc)
 make install
 cd "$GITHUB_WORKSPACE"
