@@ -20,9 +20,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - api: 24
+          - api: 19
+            abi: armeabi-v7a
+            cc_target: armv7a-linux-androideabi19
+            host: arm-linux-androideabi
+            openssl_target: linux-armv4
+            goarch: arm
+            goarm: 7
+          - api: 21
+            abi: armeabi-v7a
+            cc_target: armv7a-linux-androideabi21
+            host: arm-linux-androideabi
+            openssl_target: linux-armv4
+            goarch: arm
+            goarm: 7
+          - api: 21
             abi: arm64-v8a
-            cc_target: aarch64-linux-android24
+            cc_target: aarch64-linux-android21
             host: aarch64-linux-android
             openssl_target: linux-aarch64
             goarch: arm64
@@ -34,6 +48,13 @@ jobs:
             openssl_target: linux-armv4
             goarch: arm
             goarm: 7
+          - api: 24
+            abi: arm64-v8a
+            cc_target: aarch64-linux-android24
+            host: aarch64-linux-android
+            openssl_target: linux-aarch64
+            goarch: arm64
+            goarm: ''
 
     steps:
       - uses: actions/checkout@v6
@@ -103,7 +124,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.22'
+          go-version: '1.26'
           cache: false
 
       - name: Build v2ray-core
