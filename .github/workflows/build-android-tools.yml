@@ -77,7 +77,7 @@ jobs:
           echo "AR=$NDK_BIN/llvm-ar" >> $GITHUB_ENV
           echo "RANLIB=$NDK_BIN/llvm-ranlib" >> $GITHUB_ENV
           echo "STRIP=$NDK_BIN/llvm-strip" >> $GITHUB_ENV
-          echo "CFLAGS=-D__ANDROID_API__=${{ matrix.api }} -fPIE -fPIC" >> $GITHUB_ENV
+          echo "CFLAGS=-fPIE -fPIC" >> $GITHUB_ENV
           echo "LDFLAGS=-fPIE -pie" >> $GITHUB_ENV
           echo "DEPS_DIR=$GITHUB_WORKSPACE/deps/${{ matrix.cc_target }}" >> $GITHUB_ENV
           echo "API=${{ matrix.api }}" >> $GITHUB_ENV
