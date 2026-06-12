@@ -42,18 +42,21 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | bash | ✅ | ✅ | ✅ | |
 | dnstt-client | ✅ | ✅ | ✅ | |
 | go-tcp-proxy-tunnel | ✅ | ✅ | ✅ | |
-| OpenSSH | ❌ | ✅ | ✅ | ssh-keygen uses `getrandom` (API 21+) |
+| OpenSSH | ✅ | ✅ | ✅ | Falls back to `/dev/urandom` for RNG |
 | corkscrew | ✅ | ✅ | ✅ | |
-| stunnel | ❌ | ✅ | ✅ | Uses `pthread_mutexattr_setpshared` |
-| stubby | ❌ | ❌ | ✅ | Needs getdns which requires API 24 |
-| php8 | ❌ | ✅ | ✅ | Needs `sigaction` + `getrandom` |
+| stunnel | ✅ | ✅ | ✅ | Falls back to OpenSSL RNG |
+| stubby | ❌ | ❌ | ✅ | getdns needs API 24 (getifaddrs, res_nsearch) |
+| php8 | ✅ | ✅ | ✅ | Uses compat stubs for mblen/localeconv/DNS |
 | badvpn-tun2socks-udprelay | ✅ | ✅ | ✅ | Needs tun device |
 
 ### API 19 Specifics
 
 - ttyd uses `forkpty` compat via `/dev/ptmx` (API < 23)
 - libuv uses compat shims for: `epoll_create1`, `epoll_pwait`, `sendmmsg`, `recvmmsg`, `accept4`, `dup3`, `pthread_condattr_setclock`, `pthread_gettid_np`
-- OpenSSH, stunnel, stubby, and php8 are **not available** on API 19
+- OpenSSH falls back to `/dev/urandom` for RNG, uses `getifaddrs` stub (returns ENOSYS — `BindInterface` won't work)
+- stunnel falls back to OpenSSL RNG, no runtime issues
+- php8 uses compat stubs for `mblen`, `getdtablesize`, `localeconv`, DNS functions
+- **stubby** is the only tool **not available** on API 19 — getdns requires API 24 for `getifaddrs` and `res_nsearch`
 
 ## Build Matrix
 

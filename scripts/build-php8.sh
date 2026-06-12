@@ -27,7 +27,8 @@ void zif_dns_get_record(void *d, void *rv) { }
 void zif_dns_get_mx(void *d, void *rv) { }
 STUBEOF
 $CC $CFLAGS -c -o php-stubs.o php-stubs.c
-make -j$(nproc) EXTRA_LDFLAGS="$PWD/php-stubs.o" || \
-make -j$(nproc) EXTRA_LIBS="$PWD/php-stubs.o $DEPS_DIR/openssl/lib/libssl.a $DEPS_DIR/openssl/lib/libcrypto.a $DEPS_DIR/zlib/lib/libz.a -lm -ldl" || true
+$AR rcs libphp-stubs.a php-stubs.o
+sed -i 's|^EXTRA_LIBS =|EXTRA_LIBS = '"$PWD"'/libphp-stubs.a |' Makefile
+make -j$(nproc)
 $STRIP sapi/cli/php || true
 cp sapi/cli/php "$GITHUB_WORKSPACE/artifacts/php8" 2>/dev/null || true
