@@ -28,7 +28,7 @@ export LIBCAPNG_LIBS=' '
   --disable-plugin-auth-pam --disable-plugin-down-root \
   --disable-debug --disable-lz4 --disable-dco \
   --disable-shared --enable-static
-sed -i '/#define HAVE_LIBCAP_NG/d' config.h
+sed -i '/HAVE_LIBCAP/d' config.h
 make -j$(nproc)
 $STRIP src/openvpn/openvpn || true
 cp src/openvpn/openvpn "$GITHUB_WORKSPACE/artifacts/"
