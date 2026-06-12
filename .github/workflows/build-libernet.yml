@@ -2,8 +2,7 @@ name: Build Libernet for Android
 
 on:
   push:
-    branches: [ libernet-android ]
-  workflow_dispatch:
+    branches: [ none ]
 
 permissions:
   contents: write
