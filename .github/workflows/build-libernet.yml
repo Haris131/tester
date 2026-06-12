@@ -2,7 +2,8 @@ name: Build Libernet for Android
 
 on:
   push:
-    branches: [ none ]
+    branches: [ libernet-android ]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -104,6 +105,7 @@ jobs:
           echo "GOARM=${{ matrix.goarm }}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=libernet-tools-${{ matrix.cc_target }}" >> $GITHUB_ENV
           echo "SCRIPTS_DIR=$GITHUB_WORKSPACE/scripts" >> $GITHUB_ENV
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
 
       - name: Fix NDK symlinks
         run: |
@@ -144,9 +146,7 @@ jobs:
         run: bash $SCRIPTS_DIR/build-libyaml.sh
 
       - name: Build sshpass
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/artifacts
-          bash $SCRIPTS_DIR/build-sshpass.sh
+        run: bash $SCRIPTS_DIR/build-sshpass.sh
 
       - name: Install NSS/NSPR headers
         run: bash $SCRIPTS_DIR/install-nss-nspr.sh
@@ -166,7 +166,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.22'
+          go-version: '1.26'
           cache: false
 
       - name: Build bash
@@ -177,6 +177,9 @@ jobs:
 
       - name: Build go-tcp-proxy-tunnel
         run: bash $SCRIPTS_DIR/build-go-tcp-proxy-tunnel.sh
+
+      - name: Build v2ray-core
+        run: bash $SCRIPTS_DIR/build-v2ray.sh
 
       - name: Build corkscrew
         run: bash $SCRIPTS_DIR/build-corkscrew.sh
@@ -195,6 +198,15 @@ jobs:
 
       - name: Build php8
         run: bash $SCRIPTS_DIR/build-php8.sh
+
+      - name: Build openvpn
+        run: bash $SCRIPTS_DIR/build-openvpn.sh
+
+      - name: Build vnstat
+        run: bash $SCRIPTS_DIR/build-vnstat.sh
+
+      - name: Build ttyd
+        run: bash $SCRIPTS_DIR/build-ttyd.sh
 
       - name: Package
         run: bash $SCRIPTS_DIR/package.sh
