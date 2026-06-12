@@ -84,13 +84,6 @@ if [ "$API" -lt 21 ]; then
 #define EPOLL_CLOEXEC 02000000
 #endif
 
-#ifndef HAVE_STRUCT_MMSGHDR
-struct mmsghdr {
-  struct msghdr msg_hdr;
-  unsigned int msg_len;
-};
-#endif
-
 int epoll_create1(int flags) {
   int fd = epoll_create(1);
   if (fd < 0) return -1;
