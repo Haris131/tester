@@ -7,6 +7,8 @@ TOOLCHAIN="$NDK_ROOT/build/cmake/android.toolchain.cmake"
 
 build_cmake_dep() {
   local name="$1" url="$2" srcdir="$3" prefix="$4" conf="$5"
+  # cmake toolchain already sets __ANDROID_API__ via ANDROID_PLATFORM
+cmake_cflags=$(echo " $CFLAGS " | sed 's/ -D__ANDROID_API__=[^ ]* / /g')
   wget -q "$url" -O "${name}.tar.gz"
   tar xzf "${name}.tar.gz"
   cd "$srcdir"
@@ -14,7 +16,7 @@ build_cmake_dep() {
   cmake .. -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
     -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$API" \
-    -DANDROID_STL=none -DCMAKE_C_FLAGS="$CFLAGS" \
+    -DANDROID_STL=none -DCMAKE_C_FLAGS="$cmake_cflags" \
     -DBUILD_SHARED_LIBS=OFF $conf
   make -j$(nproc)
   make install
@@ -245,9 +247,11 @@ COMPATEOF
 fi
 
 mkdir -p build && cd build
+# cmake toolchain already sets __ANDROID_API__ via ANDROID_PLATFORM
+cmake_cflags=$(echo " $CFLAGS " | sed 's/ -D__ANDROID_API__=[^ ]* / /g')
 cmake .. -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
   -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$API" \
-  -DANDROID_STL=none -DCMAKE_C_FLAGS="$CFLAGS" \
+  -DANDROID_STL=none -DCMAKE_C_FLAGS="$cmake_cflags" \
   -DCMAKE_INSTALL_PREFIX="$DEPS_DIR/ttyd" \
   -DCMAKE_FIND_ROOT_PATH="$DEPS_DIR/libuv;$DEPS_DIR/json-c;$DEPS_DIR/lws" \
   -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
