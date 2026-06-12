@@ -69,9 +69,76 @@ build_cmake_dep libwebsockets \
 sed -i '/set(LIBWEBSOCKETS_LIBRARIES/s/ websockets_shared)/)/' \
   "$DEPS_DIR/lws/lib/cmake/libwebsockets/libwebsockets-config.cmake"
 
+# libuv compat for Android API < 21: provide epoll_create1, epoll_pwait, sendmmsg, recvmmsg
+if [ "$API" -lt 21 ]; then
+  cat > libuv_compat_19.c << 'COMPAT19'
+#if defined(__ANDROID__) && __ANDROID_API__ < 21
+#include <sys/socket.h>
+#include <sys/epoll.h>
+#include <signal.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+
+#ifndef EPOLL_CLOEXEC
+#define EPOLL_CLOEXEC 02000000
+#endif
+
+#ifndef HAVE_STRUCT_MMSGHDR
+struct mmsghdr {
+  struct msghdr msg_hdr;
+  unsigned int msg_len;
+};
+#endif
+
+int epoll_create1(int flags) {
+  int fd = epoll_create(1);
+  if (fd < 0) return -1;
+  if (flags & EPOLL_CLOEXEC) fcntl(fd, F_SETFD, FD_CLOEXEC);
+  return fd;
+}
+
+int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout, const sigset_t *sigmask) {
+  (void)sigmask;
+  return epoll_wait(epfd, events, maxevents, timeout);
+}
+
+int sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags) {
+  int sent;
+  for (sent = 0; sent < (int)vlen; sent++) {
+    int ret = sendmsg(sockfd, &msgvec[sent].msg_hdr, flags);
+    if (ret >= 0) { msgvec[sent].msg_len = ret; }
+    else if (sent == 0) return -1;
+    else break;
+  }
+  return sent;
+}
+
+int recvmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags, struct timespec *timeout) {
+  (void)timeout;
+  int received;
+  for (received = 0; received < (int)vlen; received++) {
+    int ret = recvmsg(sockfd, &msgvec[received].msg_hdr, flags);
+    if (ret >= 0) { msgvec[received].msg_len = ret; }
+    else if (received == 0) return -1;
+    else break;
+  }
+  return received;
+}
+#endif
+COMPAT19
+  $CC -c -fPIC libuv_compat_19.c -o libuv_compat_19.o
+  $AR rcs libuv_compat_19.a libuv_compat_19.o
+fi
+
 # ttyd
 git clone --depth=1 https://github.com/tsl0922/ttyd.git
 cd ttyd
+
+# Link libuv compat library for API < 21
+if [ "$API" -lt 21 ]; then
+  sed -i 's|set(LINK_LIBS ${ZLIB_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSON-C_LIBRARIES} ${LIBUV_LIBRARIES})|set(LINK_LIBS ${ZLIB_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSON-C_LIBRARIES} ${LIBUV_LIBRARIES} ${CMAKE_SOURCE_DIR}/../libuv_compat_19.a)|' CMakeLists.txt
+fi
 
 # forkpty requires Android API 23+. Provide compat via openpty()+fork() for older API levels.
 if [ "$API" -lt 23 ]; then
