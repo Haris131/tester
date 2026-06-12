@@ -18,7 +18,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy |
 | [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling |
 | [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) |
-| [php8](https://www.php.net/) | PHP CLI + CGI (sockets, pcntl, session, openssl, zlib, JSON) |
+| [php8](https://www.php.net/) | PHP CLI (sockets, pcntl, session, openssl, zlib, JSON) |
 | [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay |
 
 ## Build Matrix
@@ -35,6 +35,10 @@ Cross-compiled networking tools for Android via GitHub Actions.
 
 All 5 configs build successfully with no `continue-on-error` on any step.
 
-## Usage
+## Downloads
 
-Download the tarball from Actions, extract, and run on your device.
+Pre-built binaries are available from:
+- **GitHub Releases** — latest builds with all variants
+- **Actions artifacts** — individual per-config tarballs
+
+Download, extract, and run on your device.
