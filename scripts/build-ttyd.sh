@@ -136,7 +136,7 @@ pid_t forkpty(int *amaster, char *name, const struct termios *termp, const struc
   return pid;
 }
 COMPATEOF
-  sed -i '/set(SOURCE_FILES/a\    src/forkpty_compat.c' CMakeLists.txt
+  sed -i '/^set(SOURCE_FILES/s/)$/ src\/forkpty_compat.c)/' CMakeLists.txt
 fi
 
 mkdir -p build && cd build
