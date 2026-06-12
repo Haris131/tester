@@ -45,6 +45,10 @@ build_cmake_dep libwebsockets \
   "$DEPS_DIR/lws" \
   "-DLWS_WITH_SSL=OFF -DLWS_WITH_ZLIB=OFF -DLWS_WITH_CLIENT=ON -DLWS_WITHOUT_TESTAPPS=ON -DLWS_STATIC_PIC=ON -DLWS_WITH_SHARED=OFF -DLWS_WITH_LIBUV=ON -DCMAKE_FIND_ROOT_PATH=$DEPS_DIR/libuv"
 
+# fix lws cmake config to not reference shared library target
+sed -i '/set(LIBWEBSOCKETS_LIBRARIES/s/ websockets_shared)/)/' \
+  "$DEPS_DIR/lws/lib/cmake/libwebsockets/LibwebsocketsConfig.cmake"
+
 # ttyd
 git clone --depth=1 https://github.com/tsl0922/ttyd.git
 cd ttyd
