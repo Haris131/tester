@@ -72,6 +72,73 @@ sed -i '/set(LIBWEBSOCKETS_LIBRARIES/s/ websockets_shared)/)/' \
 # ttyd
 git clone --depth=1 https://github.com/tsl0922/ttyd.git
 cd ttyd
+
+# forkpty requires Android API 23+. Provide compat via openpty()+fork() for older API levels.
+if [ "$API" -lt 23 ]; then
+  cat > src/forkpty_compat.c << 'COMPATEOF'
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
+/* openpty is API 21+ on Android; provide our own for older API levels */
+#if defined(__ANDROID__) && __ANDROID_API__ < 21
+static int compat_openpty(int *amaster, int *aslave, char *name,
+                           const struct termios *termp, const struct winsize *winp) {
+  int master, slave;
+  char *pts_name;
+  master = open("/dev/ptmx", O_RDWR);
+  if (master < 0) return -1;
+  if (grantpt(master) || unlockpt(master)) { close(master); return -1; }
+  pts_name = ptsname(master);
+  if (!pts_name) { close(master); return -1; }
+  slave = open(pts_name, O_RDWR);
+  if (slave < 0) { close(master); return -1; }
+  if (termp) tcsetattr(slave, TCSAFLUSH, termp);
+  if (winp) ioctl(slave, TIOCSWINSZ, winp);
+  *amaster = master;
+  *aslave = slave;
+  if (name) strcpy(name, pts_name);
+  return 0;
+}
+#else
+#include <pty.h>
+#endif
+
+pid_t forkpty(int *amaster, char *name, const struct termios *termp, const struct winsize *winp) {
+  int master, slave;
+#if defined(__ANDROID__) && __ANDROID_API__ < 21
+  if (compat_openpty(&master, &slave, name, termp, winp) == -1)
+#else
+  if (openpty(&master, &slave, name, termp, winp) == -1)
+#endif
+    return -1;
+  pid_t pid = fork();
+  if (pid == -1) {
+    close(master);
+    close(slave);
+    return -1;
+  }
+  if (pid == 0) {
+    close(master);
+    setsid();
+    if (ioctl(slave, TIOCSCTTY, 0) == -1) _exit(1);
+    dup2(slave, 0);
+    dup2(slave, 1);
+    dup2(slave, 2);
+    if (slave > 2) close(slave);
+    return 0;
+  }
+  close(slave);
+  *amaster = master;
+  return pid;
+}
+COMPATEOF
+  sed -i '/set(SOURCE_FILES/a\    src/forkpty_compat.c' CMakeLists.txt
+fi
+
 mkdir -p build && cd build
 cmake .. -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
   -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$API" \
