@@ -25,5 +25,5 @@ export LDFLAGS="$LDFLAGS -L$DEPS_DIR/sqlite/lib"
 sed -i 's/lockf(pidfile, F_TLOCK, 0)/flock(pidfile, LOCK_EX | LOCK_NB)/' src/daemon.c
 sed -i 's/for (i = getdtablesize(); i >= 0; --i)/for (i = sysconf(_SC_OPEN_MAX); i >= 0; --i)/' src/daemon.c
 make -j$(nproc)
-$STRIP src/vnstatd src/vnstat 2>/dev/null || true
-cp src/vnstatd src/vnstat "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null || true
+$STRIP vnstatd vnstat src/vnstatd src/vnstat 2>/dev/null || true
+cp vnstatd vnstat src/vnstatd src/vnstat "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null || true
