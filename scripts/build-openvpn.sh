@@ -24,7 +24,8 @@ export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/lzo/lib"
   --with-ssl="$DEPS_DIR/openssl" \
   --with-lzo="$DEPS_DIR/lzo" \
   --disable-plugin-auth-pam --disable-plugin-down-root \
-  --disable-debug --disable-lz4 --disable-dco --disable-libcapng \
+  --disable-debug --disable-lz4 --disable-dco \
+  ac_cv_header_libcap_ng_h=no \
   --disable-shared --enable-static
 make -j$(nproc)
 $STRIP src/openvpn/openvpn || true
