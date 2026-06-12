@@ -24,7 +24,7 @@ export LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/lzo/lib"
   --with-ssl="$DEPS_DIR/openssl" \
   --with-lzo="$DEPS_DIR/lzo" \
   --disable-plugin-auth-pam --disable-plugin-down-root \
-  --disable-debug --disable-lz4 --disable-shared --enable-static
+  --disable-debug --disable-lz4 --disable-dco --disable-shared --enable-static
 make -j$(nproc)
 $STRIP src/openvpn/openvpn || true
 cp src/openvpn/openvpn "$GITHUB_WORKSPACE/artifacts/"
