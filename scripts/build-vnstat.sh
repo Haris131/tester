@@ -21,7 +21,8 @@ export CFLAGS="$CFLAGS -I$DEPS_DIR/sqlite/include"
 export LDFLAGS="$LDFLAGS -L$DEPS_DIR/sqlite/lib"
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --disable-shared --enable-static --disable-nls --enable-imageoutput=no \
-  --with-sqlite3="$DEPS_DIR/sqlite"
+  --with-sqlite3="$DEPS_DIR/sqlite" \
+  ac_cv_func_getdtablesize=no
 make -j$(nproc)
 $STRIP src/vnstatd src/vnstat 2>/dev/null || true
 cp src/vnstatd src/vnstat "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null || true
