@@ -83,8 +83,9 @@ if [ "$API" -lt 23 ]; then
 #include <string.h>
 #include <errno.h>
 
-/* openpty is API 21+ on Android; provide our own for older API levels */
-#if defined(__ANDROID__) && __ANDROID_API__ < 21
+/* Android NDK r23b: openpty and forkpty both require API 23+.
+   Provide both via direct /dev/ptmx access for API < 23. */
+#if defined(__ANDROID__) && __ANDROID_API__ < 23
 static int compat_openpty(int *amaster, int *aslave, char *name,
                            const struct termios *termp, const struct winsize *winp) {
   int master, slave;
@@ -109,7 +110,7 @@ static int compat_openpty(int *amaster, int *aslave, char *name,
 
 pid_t forkpty(int *amaster, char *name, const struct termios *termp, const struct winsize *winp) {
   int master, slave;
-#if defined(__ANDROID__) && __ANDROID_API__ < 21
+#if defined(__ANDROID__) && __ANDROID_API__ < 23
   if (compat_openpty(&master, &slave, name, termp, winp) == -1)
 #else
   if (openpty(&master, &slave, name, termp, winp) == -1)
