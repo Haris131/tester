@@ -18,6 +18,9 @@ export LDFLAGS="$LDFLAGS \
   -L$DEPS_DIR/curl/lib \
   -L$DEPS_DIR/libxml2/lib \
   -L$DEPS_DIR/libzip/lib"
+export PKG_CONFIG_PATH="$DEPS_DIR/curl/lib/pkgconfig:$DEPS_DIR/libxml2/lib/pkgconfig:$DEPS_DIR/libzip/lib/pkgconfig"
+export CURL_CFLAGS="-I$DEPS_DIR/curl/include"
+export CURL_LIBS="-L$DEPS_DIR/curl/lib -lcurl -lssl -lcrypto -lz"
 
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --disable-all --without-pear \
