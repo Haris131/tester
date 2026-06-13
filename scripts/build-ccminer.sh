@@ -79,12 +79,15 @@ export ac_cv_lib_crypto_EVP_DigestFinal_ex=yes
 export ac_cv_lib_z_gzopen=yes
 export ac_cv_lib_pthread_pthread_create=yes
 
-# Pass library paths via CFLAGS/LDFLAGS
-CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR/curl/include"
-LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib -lssl -lcrypto -lz -ldl"
+# Pass library paths via CPPFLAGS (used by ccminer_CPPFLAGS in Makefile) and LDFLAGS
+INCS="-I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR/curl/include"
+LIBS="-L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib -lssl -lcrypto -lz -ldl"
+export CPPFLAGS="$CPPFLAGS $INCS"
+CFLAGS="$CFLAGS $INCS"
+LDFLAGS="$LDFLAGS $LIBS"
 
 echo "=== Running configure for ccminer ==="
-./configure --host="$HOST" CC="$CC" CXX="${CXX:-$CC}" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+./configure --host="$HOST" CC="$CC" CXX="${CXX:-$CC}" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
 
