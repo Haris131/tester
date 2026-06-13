@@ -21,7 +21,7 @@ env:
   HTTPING_VERSION: 3.5
   BASH_VER: 5.2.37
   PHP_VERSION: 8.3.8
-  CACHE_PREFIX: v1
+  CACHE_PREFIX: v2
 
 jobs:
   build:
@@ -204,6 +204,9 @@ jobs:
 
       - name: Build stubby
         run: bash $SCRIPTS_DIR/build-stubby.sh
+
+      - name: Build iconv
+        run: bash $SCRIPTS_DIR/build-iconv.sh
 
       - name: Build php8
         run: bash $SCRIPTS_DIR/build-php8.sh
