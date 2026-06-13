@@ -70,6 +70,55 @@ FEOF
 # Force bundled jansson
 export ac_cv_lib_jansson_json_loads=no
 
+# pthread_barrier_t compat for Android API < 24
+if [ "$API" -lt 24 ]; then
+  cat > compat/pthread_barrier_compat.h << 'FEOF'
+#ifndef PTHREAD_BARRIER_COMPAT_H
+#define PTHREAD_BARRIER_COMPAT_H
+#include <pthread.h>
+
+typedef struct {
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  unsigned int count;
+  unsigned int arrived;
+} pthread_barrier_t;
+
+static inline int pthread_barrier_init(pthread_barrier_t *b,
+                                        const void *attr,
+                                        unsigned int count) {
+  (void)attr;
+  pthread_mutex_init(&b->mutex, NULL);
+  pthread_cond_init(&b->cond, NULL);
+  b->count = count;
+  b->arrived = 0;
+  return 0;
+}
+
+static inline int pthread_barrier_destroy(pthread_barrier_t *b) {
+  pthread_mutex_destroy(&b->mutex);
+  pthread_cond_destroy(&b->cond);
+  return 0;
+}
+
+static inline int pthread_barrier_wait(pthread_barrier_t *b) {
+  pthread_mutex_lock(&b->mutex);
+  b->arrived++;
+  if (b->arrived >= b->count) {
+    b->arrived = 0;
+    pthread_cond_broadcast(&b->cond);
+    pthread_mutex_unlock(&b->mutex);
+    return 1;
+  }
+  pthread_cond_wait(&b->cond, &b->mutex);
+  pthread_mutex_unlock(&b->mutex);
+  return 0;
+}
+#endif
+FEOF
+  export CFLAGS="$CFLAGS -include $PWD/compat/pthread_barrier_compat.h"
+fi
+
 # Redirect libcurl pkg-config lookup to our cross-compiled curl
 export PKG_CONFIG_PATH="$DEPS_DIR/curl/lib/pkgconfig:$DEPS_DIR/openssl/lib/pkgconfig:$DEPS_DIR/zlib/lib/pkgconfig"
 
@@ -77,7 +126,9 @@ export PKG_CONFIG_PATH="$DEPS_DIR/curl/lib/pkgconfig:$DEPS_DIR/openssl/lib/pkgco
 export ac_cv_lib_ssl_SSL_free=yes
 export ac_cv_lib_crypto_EVP_DigestFinal_ex=yes
 export ac_cv_lib_z_gzopen=yes
-export ac_cv_lib_pthread_pthread_create=yes
+# pthread is in libc on Android, not a separate lib
+export ac_cv_lib_pthread_pthread_create=no
+export ac_cv_search_pthread_create=no
 
 # Pass library paths via CPPFLAGS (used by ccminer_CPPFLAGS in Makefile) and LDFLAGS
 INCS="-I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR/curl/include"
@@ -87,7 +138,10 @@ CFLAGS="$CFLAGS $INCS"
 LDFLAGS="$LDFLAGS $LIBS"
 
 echo "=== Running configure for ccminer ==="
-./configure --host="$HOST" CC="$CC" CXX="${CXX:-$CC}" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+# Use clang++ for C++ files; pass CXXFLAGS too since ccminer uses it separately from CFLAGS
+CXX="${CC%clang}clang++"
+CXXFLAGS="$CFLAGS"
+./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
 
