@@ -84,19 +84,23 @@ CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR
 LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib -lssl -lcrypto -lz -ldl"
 
 echo "=== Running configure for ccminer ==="
-./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+./configure --host="$HOST" CC="$CC" CXX="${CXX:-$CC}" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
 
-# Build baseline (A53 compatible — no ARMv8 crypto extensions)
-sed -i 's/-march=armv8-a+crypto/-march=armv8-a/g' Makefile
-make -j$(nproc)
-$STRIP ccminer 2>/dev/null || true
-cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer"
-
-# Build crypto version (A55/A73+ — with ARMv8 crypto extensions)
-make clean 2>/dev/null || true
-sed -i 's/-march=armv8-a/-march=armv8-a+crypto/g' Makefile
+# Build crypto version first (uses default -march=armv8-a+crypto from Makefile)
+echo "=== Building crypto version (A55/A73+) ==="
 make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
 cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
+echo "=== Crypto build done ==="
+
+# Build baseline (A53 compatible — no ARMv8 crypto extensions)
+echo "=== Building baseline (A53) ==="
+make clean 2>/dev/null || true
+# Replace march in multi-line Makefile variable
+sed -i '/^ccminer_CPPFLAGS /,/^[^	]/s/-march=armv8-a+crypto/-march=armv8-a/' Makefile
+make -j$(nproc)
+$STRIP ccminer 2>/dev/null || true
+cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer"
+echo "=== Baseline build done ==="
