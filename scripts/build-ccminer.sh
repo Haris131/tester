@@ -9,11 +9,15 @@ if [ "$GOARCH" != "arm64" ]; then
   exit 0
 fi
 
+rm -rf ccminer
 git clone --depth=1 https://github.com/Darktron/ccminer.git
 cd ccminer
+echo "=== ccminer cloned successfully ==="
+
+[ -d compat/jansson ] || mkdir -p compat/jansson
 
 # Pre-create jansson config headers for cross-compilation
-cat > compat/jansson/jansson_config.h << 'EOF'
+cat > compat/jansson/jansson_config.h << 'FEOF'
 #ifndef JANSSON_CONFIG_H
 #define JANSSON_CONFIG_H
 #ifdef __cplusplus
@@ -24,10 +28,9 @@ cat > compat/jansson/jansson_config.h << 'EOF'
 #define JSON_INTEGER_IS_LONG_LONG 1
 #define JSON_HAVE_LOCALECONV 1
 #endif
-EOF
+FEOF
 
-# Regenerate private config for cross-compilation
-cat > compat/jansson/jansson_private_config.h << 'EOF'
+cat > compat/jansson/jansson_private_config.h << 'FEOF'
 #define HAVE_CLOSE 1
 #define HAVE_FCNTL_H 1
 #define HAVE_GETPID 1
@@ -62,7 +65,7 @@ cat > compat/jansson/jansson_private_config.h << 'EOF'
 #define PACKAGE_URL ""
 #define PACKAGE_VERSION "2.6"
 #define VERSION "2.6"
-EOF
+FEOF
 
 # Force bundled jansson
 export ac_cv_lib_jansson_json_loads=no
@@ -70,17 +73,20 @@ export ac_cv_lib_jansson_json_loads=no
 # Redirect libcurl pkg-config lookup to our cross-compiled curl
 export PKG_CONFIG_PATH="$DEPS_DIR/curl/lib/pkgconfig:$DEPS_DIR/openssl/lib/pkgconfig:$DEPS_DIR/zlib/lib/pkgconfig"
 
-# OpenSSL detection
+# Pre-set library detection (ccminer uses AC_CHECK_LIB, not --with-*)
 export ac_cv_lib_ssl_SSL_free=yes
 export ac_cv_lib_crypto_EVP_DigestFinal_ex=yes
 export ac_cv_lib_z_gzopen=yes
 export ac_cv_lib_pthread_pthread_create=yes
 
+# Pass library paths via CFLAGS/LDFLAGS
+CFLAGS="$CFLAGS -I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR/curl/include"
+LDFLAGS="$LDFLAGS -L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib -lssl -lcrypto -lz -ldl"
+
+echo "=== Running configure for ccminer ==="
 ./configure --host="$HOST" CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
-  --with-cuda=no --enable-openmp \
-  --with-ssl="$DEPS_DIR/openssl" \
-  --with-libcurl="$DEPS_DIR/curl" \
-  --with-zlib="$DEPS_DIR/zlib"
+  --with-cuda=no --enable-openmp
+echo "=== configure completed ==="
 
 # Build baseline (A53 compatible — no ARMv8 crypto extensions)
 sed -i 's/-march=armv8-a+crypto/-march=armv8-a/g' Makefile
