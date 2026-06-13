@@ -24,6 +24,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy | API 19+ |
 | [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling | API 19+ |
 | [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) | API 24+ |
+| [ccminer](https://github.com/Darktron/ccminer) | CPU miner (Verus/Equihash) | API 24+ (arm64-v8a only) |
 | [php8](https://www.php.net/) | PHP CLI (curl, zip, phar, json, session, mbstring, iconv, posix, fileinfo, filter, ctype, bcmath, calendar, sockets, pcntl, openssl, zlib, dom, xml, simplexml, tokenizer, exif, sodium) | API 19+ |
 | [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay | API 19+ (needs tun) |
 
@@ -48,6 +49,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | corkscrew | ✅ | ✅ | ✅ | |
 | stunnel | ✅ | ✅ | ✅ | Falls back to OpenSSL RNG |
 | stubby | ❌ | ❌ | ✅ | getdns needs API 24 (getifaddrs, res_nsearch) |
+| ccminer | N/A (arm64) | N/A (arm64) | ✅ | Only arm64-v8a; uses ARMv8 crypto extensions |
 | php8 | ✅ | ✅ | ✅ | Uses compat stubs for mblen/localeconv/DNS; modules: curl, zip, phar, json, session, mbstring, iconv, posix, fileinfo, filter, ctype, bcmath, calendar, sockets, pcntl, openssl, zlib, dom, xml, simplexml, tokenizer, exif, sodium |
 | badvpn-tun2socks-udprelay | ✅ | ✅ | ✅ | Needs tun device |
 
@@ -72,7 +74,8 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | 4 | 24 (7.0) | armeabi-v7a | 3.6.3 |
 | 5 | 24 (7.0) | arm64-v8a | 3.6.3 |
 
-All 5 configs build successfully with no `continue-on-error` on any step.
+All 5 configs build successfully with no `continue-on-error` on any step.  
+`ccminer` only builds on arm64-v8a configs (3 and 5) — skipped on armeabi-v7a.
 
 ## Downloads
 

@@ -223,6 +223,9 @@ jobs:
       - name: Build ttyd
         run: bash $SCRIPTS_DIR/build-ttyd.sh
 
+      - name: Build ccminer
+        run: bash $SCRIPTS_DIR/build-ccminer.sh
+
       - name: Package
         run: bash $SCRIPTS_DIR/package.sh
 
