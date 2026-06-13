@@ -145,19 +145,9 @@ CXXFLAGS="$CFLAGS"
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
 
-# Build crypto version first (uses default -march=armv8-a+crypto from Makefile)
-echo "=== Building crypto version (A55/A73+) ==="
+# Build ccminer with ARMv8 crypto extensions
+echo "=== Building ccminer ==="
 make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
 cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
-echo "=== Crypto build done ==="
-
-# Build baseline (A53 compatible — no ARMv8 crypto extensions)
-echo "=== Building baseline (A53) ==="
-make clean 2>/dev/null || true
-# Replace march in multi-line Makefile variable
-sed -i '/^ccminer_CPPFLAGS /,/^[^	]/s/-march=armv8-a+crypto/-march=armv8-a/' Makefile
-make -j$(nproc)
-$STRIP ccminer 2>/dev/null || true
-cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer"
-echo "=== Baseline build done ==="
+echo "=== ccminer build done ==="
