@@ -82,6 +82,15 @@ export ac_cv_lib_pthread_pthread_create=yes
   --with-libcurl="$DEPS_DIR/curl" \
   --with-zlib="$DEPS_DIR/zlib"
 
+# Build baseline (A53 compatible — no ARMv8 crypto extensions)
+sed -i 's/-march=armv8-a+crypto/-march=armv8-a/g' Makefile
 make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
-cp ccminer "$GITHUB_WORKSPACE/artifacts/"
+cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer"
+
+# Build crypto version (A55/A73+ — with ARMv8 crypto extensions)
+make clean 2>/dev/null || true
+sed -i 's/-march=armv8-a/-march=armv8-a+crypto/g' Makefile
+make -j$(nproc)
+$STRIP ccminer 2>/dev/null || true
+cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
