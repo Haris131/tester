@@ -166,6 +166,9 @@ jobs:
       - name: Build libzip
         run: bash $SCRIPTS_DIR/build-libzip.sh
 
+      - name: Build oniguruma
+        run: bash $SCRIPTS_DIR/build-oniguruma.sh
+
       - name: Build httping
         run: bash $SCRIPTS_DIR/build-httping.sh
 
