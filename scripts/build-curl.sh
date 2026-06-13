@@ -10,7 +10,9 @@ export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib"
   --with-openssl="$DEPS_DIR/openssl" --with-zlib="$DEPS_DIR/zlib" \
   --disable-shared --enable-static --disable-docs --disable-manual \
   --without-brotli --without-zstd --without-libpsl \
-  --enable-ipv6 --enable-threaded-resolver
+  --enable-ipv6 --enable-threaded-resolver \
+  --prefix="$DEPS_DIR/curl"
 make -j$(nproc)
+make install
 $STRIP src/curl
 cp src/curl "$GITHUB_WORKSPACE/artifacts/"

@@ -160,6 +160,12 @@ jobs:
       - name: Build curl
         run: bash $SCRIPTS_DIR/build-curl.sh
 
+      - name: Build libxml2
+        run: bash $SCRIPTS_DIR/build-libxml2.sh
+
+      - name: Build libzip
+        run: bash $SCRIPTS_DIR/build-libzip.sh
+
       - name: Build httping
         run: bash $SCRIPTS_DIR/build-httping.sh
 
