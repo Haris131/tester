@@ -20,9 +20,9 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [speedtest-go](https://github.com/librespeed/speedtest-go) | Self-hosted speed test server | API 19+ |
 | [dnstt-client](https://github.com/Haris131/dnstt) | DNS tunnel client | API 19+ |
 | [go-tcp-proxy-tunnel](https://github.com/lutfailham96/go-tcp-proxy-tunnel) | TCP proxy tunnel | API 19+ |
-| [OpenSSH client](https://www.openssh.com/) | SSH, scp, sftp, ssh-keygen, ssh-keyscan | API 21+ |
+| [OpenSSH client](https://www.openssh.com/) | SSH, scp, sftp, ssh-keygen, ssh-keyscan | API 19+ |
 | [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy | API 19+ |
-| [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling | API 21+ |
+| [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling | API 19+ |
 | [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) | API 24+ |
 | [php8](https://www.php.net/) | PHP CLI (curl, zip, phar, json, session, mbstring, iconv, posix, fileinfo, filter, ctype, bcmath, calendar, sockets, pcntl, openssl, zlib, dom, xml, simplexml, tokenizer, exif, sodium) | API 19+ |
 | [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay | API 19+ (needs tun) |
