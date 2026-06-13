@@ -181,6 +181,9 @@ jobs:
       - name: Build bash
         run: bash $SCRIPTS_DIR/build-bash.sh
 
+      - name: Build speedtest-go
+        run: bash $SCRIPTS_DIR/build-speedtest-go.sh
+
       - name: Build dnstt-client
         run: bash $SCRIPTS_DIR/build-dnstt-client.sh
 

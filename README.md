@@ -17,6 +17,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [curl](https://curl.se/) | HTTP/FTP/etc data transfer tool | API 19+ |
 | [httping](https://github.com/folkertvanheusden/httping) | HTTP ping utility | API 19+ |
 | [bash](https://www.gnu.org/software/bash/) | GNU Bourne Again SHell | API 19+ |
+| [speedtest-go](https://github.com/librespeed/speedtest-go) | Self-hosted speed test server | API 19+ |
 | [dnstt-client](https://github.com/Haris131/dnstt) | DNS tunnel client | API 19+ |
 | [go-tcp-proxy-tunnel](https://github.com/lutfailham96/go-tcp-proxy-tunnel) | TCP proxy tunnel | API 19+ |
 | [OpenSSH client](https://www.openssh.com/) | SSH, scp, sftp, ssh-keygen, ssh-keyscan | API 21+ |
@@ -40,6 +41,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | curl | ✅ | ✅ | ✅ | |
 | httping | ✅ | ✅ | ✅ | |
 | bash | ✅ | ✅ | ✅ | |
+| speedtest-go | ✅ | ✅ | ✅ | Go binary with CGO |
 | dnstt-client | ✅ | ✅ | ✅ | |
 | go-tcp-proxy-tunnel | ✅ | ✅ | ✅ | |
 | OpenSSH | ✅ | ✅ | ✅ | Falls back to `/dev/urandom` for RNG |
