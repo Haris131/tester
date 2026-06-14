@@ -61,6 +61,10 @@ sed -i '/^LDFLAGS[[:space:]]*=/ s/$/ -Wl,--gc-sections -Wl,-z,noseparate-code -W
 sed -i 's/-Wl,-z,retpolineplt//g' Makefile
 
 # Build only client binaries (not sshd which needs extra defines)
+# Remove ssh-sk-client.o (FIDO/U2F) which may cause init-time crashes
+rm -f ssh-sk-client.o 2>/dev/null
+# Also remove from dependency list in Makefile targets
+sed -i 's/ ssh-sk-client\.o//g' Makefile
 make -j$(nproc) ssh ssh-keygen ssh-keyscan ssh-keysign scp sftp
 
 # Post-process: remove .preinit_array/.init_array/.fini_array which carry
@@ -70,8 +74,9 @@ cleanup_binary() {
   local f="$1"
   [ ! -f "$f" ] && return
 
-  # Remove the actual sections
-  $OBJCOPY --remove-section=.preinit_array --remove-section=.init_array --remove-section=.fini_array "$f" 2>/dev/null || true
+  # Remove NDK CRT sentinel sections and .eh_frame (can confuse loader)
+  $OBJCOPY --remove-section=.preinit_array --remove-section=.init_array --remove-section=.fini_array \
+           --remove-section=.eh_frame --remove-section=.eh_frame_hdr "$f" 2>/dev/null || true
 
   # Zero out DT_PREINIT/INIT/FINI_ARRAYSZ in the dynamic section.
   # Setting SZ to 0 tells the linker there are no entries, so it won't
