@@ -153,11 +153,15 @@ make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
 cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
 # Bundle libomp.so from NDK so it works on device without extra deps
-OMP_SRC=$(find "$NDK_ROOT" -name "libomp.so" -type f 2>/dev/null | head -1)
+# Match architecture: aarch64 for arm64-v8a, arm for armeabi-v7a
+OMP_ARCH="aarch64"
+[ "$GOARCH" = "arm" ] && OMP_ARCH="arm"
+OMP_SRC=$(find "$NDK_ROOT" -path "*/linux/$OMP_ARCH/libomp.so" -type f 2>/dev/null | head -1)
 if [ -n "$OMP_SRC" ]; then
   cp "$OMP_SRC" "$GITHUB_WORKSPACE/artifacts/libomp.so"
+  file "$OMP_SRC"
   echo "=== Bundled libomp.so from NDK ==="
 else
-  echo "=== WARNING: libomp.so not found in NDK, ccminer may need it installed ==="
+  echo "=== WARNING: libomp.so not found in NDK for $OMP_ARCH, ccminer may need it installed ==="
 fi
 echo "=== ccminer build done ==="

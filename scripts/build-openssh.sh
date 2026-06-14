@@ -54,6 +54,10 @@ CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline --disable-pkcs11 \
   --with-ipaddr-display=none
 
+# Remove retpolineplt (unsupported on Android API 33+), add gc-sections
+sed -i 's/-Wl,-z,retpolineplt//g' Makefile
+sed -i 's/^LDFLAGS=/& -Wl,--gc-sections /' Makefile
+
 # Build only client binaries (not sshd which needs extra defines)
 make -j$(nproc) ssh ssh-keygen ssh-keyscan ssh-keysign scp sftp
 for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
