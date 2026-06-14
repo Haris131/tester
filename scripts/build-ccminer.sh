@@ -142,7 +142,8 @@ echo "=== Running configure for ccminer ==="
 CXX="${CC%clang}clang++"
 CXXFLAGS="$CFLAGS"
 # Static link libc++ to avoid needing libc++_shared.so on device
-LDFLAGS="$LDFLAGS -static-libstdc++"
+# Add RUNPATH=$ORIGIN so libomp.so is found in same directory as binary
+LDFLAGS="$LDFLAGS -static-libstdc++ -Wl,-rpath,\$ORIGIN"
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
