@@ -41,7 +41,12 @@ FEOF
 $CC $CFLAGS -c bsd-getifaddrs.c -o bsd-getifaddrs.o
 
 export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
-export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib $PWD/bsd-getifaddrs.o"
+# Remove -ftrapv and -mretpoline which may cause init-time crashes on this device
+CFLAGS="${CFLAGS/-ftrapv/}"
+CFLAGS="${CFLAGS/-mretpoline/}"
+CFLAGS="$CFLAGS -fno-stack-protector"
+export CFLAGS
+export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib $PWD/bsd-getifaddrs.o -Wl,--no-eh-frame-hdr"
 
 CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   ac_cv_func_getaddrinfo=yes ac_cv_have_int64_t=yes ac_cv_have_u_int64_t=yes ac_cv_have_uint64_t=yes \
@@ -59,6 +64,9 @@ CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
 # Also remove retpolineplt (unsupported on Android 14+ linker).
 sed -i '/^LDFLAGS[[:space:]]*=/ s/$/ -Wl,--gc-sections -Wl,-z,noseparate-code -Wl,-z,max-page-size=0x4000/' Makefile
 sed -i 's/-Wl,-z,retpolineplt//g' Makefile
+# Remove -ftrapv and -mretpoline (can cause init crashes on some devices)
+sed -i 's/-ftrapv//g' Makefile
+sed -i 's/-mretpoline//g' Makefile
 
 # Build only client binaries (not sshd which needs extra defines)
 # Remove ssh-sk-client.o (FIDO/U2F) which may cause init-time crashes
