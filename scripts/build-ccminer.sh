@@ -141,6 +141,8 @@ echo "=== Running configure for ccminer ==="
 # Use clang++ for C++ files; pass CXXFLAGS too since ccminer uses it separately from CFLAGS
 CXX="${CC%clang}clang++"
 CXXFLAGS="$CFLAGS"
+# Static link libc++ to avoid needing libc++_shared.so on device
+LDFLAGS="$LDFLAGS -static-libstdc++"
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
@@ -150,4 +152,12 @@ echo "=== Building ccminer ==="
 make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
 cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
+# Bundle libomp.so from NDK so it works on device without extra deps
+OMP_SRC=$(find "$NDK_ROOT" -name "libomp.so" -type f 2>/dev/null | head -1)
+if [ -n "$OMP_SRC" ]; then
+  cp "$OMP_SRC" "$GITHUB_WORKSPACE/artifacts/libomp.so"
+  echo "=== Bundled libomp.so from NDK ==="
+else
+  echo "=== WARNING: libomp.so not found in NDK, ccminer may need it installed ==="
+fi
 echo "=== ccminer build done ==="
