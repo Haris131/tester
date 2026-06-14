@@ -20,6 +20,14 @@ FEOF
 # Fix bzero redeclaration for clang
 sed -i 's|^bzero(void \*b, size_t n)|#ifdef bzero\n#undef bzero\n#endif\nbzero(void *b, size_t n)|' openbsd-compat/bsd-misc.c
 
+# Fix pwcopy NULL dereference for pw_gecos/pw_class/pw_dir/pw_shell/pw_passwd
+# On Android, getpwuid() can return NULL for these fields, causing xstrdup()->strlen(NULL) crash
+sed -i 's/copy->pw_passwd = xstrdup(pw->pw_passwd);/copy->pw_passwd = xstrdup(pw->pw_passwd == NULL ? "*" : pw->pw_passwd);/' misc.c
+sed -i 's/copy->pw_gecos = xstrdup(pw->pw_gecos);/copy->pw_gecos = xstrdup(pw->pw_gecos == NULL ? "" : pw->pw_gecos);/' misc.c
+sed -i 's/copy->pw_class = xstrdup(pw->pw_class);/copy->pw_class = xstrdup(pw->pw_class == NULL ? "" : pw->pw_class);/' misc.c
+sed -i 's/copy->pw_dir = xstrdup(pw->pw_dir);/copy->pw_dir = xstrdup(pw->pw_dir == NULL ? "" : pw->pw_dir);/' misc.c
+sed -i 's/copy->pw_shell = xstrdup(pw->pw_shell);/copy->pw_shell = xstrdup(pw->pw_shell == NULL ? "" : pw->pw_shell);/' misc.c
+
 # getifaddrs stub for Android API < 24 (OpenSSH 9.9p1 removed compat fallback)
 # Must compile before configure so LDFLAGS is baked into Makefile
 cat > bsd-getifaddrs.c << 'FEOF'
