@@ -6,52 +6,52 @@ Cross-compiled networking tools for Android via GitHub Actions.
 
 | Tool | Description | Works on |
 |------|-------------|----------|
-| [v2ray-core](https://github.com/v2fly/v2ray-core) | Proxy platform (VMess, VLESS, Shadowsocks, etc.) | API 19+ |
-| [openvpn](https://openvpn.net/) | Open-source VPN client | API 19+ (needs tun) |
-| [vnstat](https://github.com/vergoh/vnstat) | Network traffic monitor | API 19+ |
-| [vnstatd](https://github.com/vergoh/vnstat) | vnstat daemon | API 19+ |
-| [ttyd](https://github.com/tsl0922/ttyd) | Web terminal emulator | API 19+ |
-| [sshpass](https://sourceforge.net/projects/sshpass/) | Non-interactive SSH password auth | API 19+ |
 | [badvpn-tun2socks](https://github.com/ambrop72/badvpn) | Tunnel TCP over SOCKS | API 19+ (needs tun) |
-| [jq](https://jqlang.github.io/jq/) | Command-line JSON processor | API 19+ |
-| [curl](https://curl.se/) | HTTP/FTP/etc data transfer tool | API 19+ |
-| [httping](https://github.com/folkertvanheusden/httping) | HTTP ping utility | API 19+ |
+| [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay | API 19+ (needs tun) |
 | [bash](https://www.gnu.org/software/bash/) | GNU Bourne Again SHell | API 19+ |
-| [speedtest-go](https://github.com/librespeed/speedtest-go) | Self-hosted speed test server | API 19+ |
+| [ccminer](https://github.com/Darktron/ccminer) | CPU miner (Verus/Equihash) | API 24+ (arm64-v8a only) |
+| [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy | API 19+ |
+| [curl](https://curl.se/) | HTTP/FTP/etc data transfer tool | API 19+ |
 | [dnstt-client](https://github.com/Haris131/dnstt) | DNS tunnel client | API 19+ |
 | [go-tcp-proxy-tunnel](https://github.com/lutfailham96/go-tcp-proxy-tunnel) | TCP proxy tunnel | API 19+ |
+| [httping](https://github.com/folkertvanheusden/httping) | HTTP ping utility | API 19+ |
+| [jq](https://jqlang.github.io/jq/) | Command-line JSON processor | API 19+ |
 | [OpenSSH client](https://www.openssh.com/) | SSH, scp, sftp, ssh-keygen, ssh-keyscan | API 19+ |
-| [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy | API 19+ |
-| [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling | API 19+ |
-| [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) | API 24+ |
-| [ccminer](https://github.com/Darktron/ccminer) | CPU miner (Verus/Equihash) | API 24+ (arm64-v8a only) |
+| [openvpn](https://openvpn.net/) | Open-source VPN client | API 19+ (needs tun) |
 | [php8](https://www.php.net/) | PHP CLI (curl, zip, phar, json, session, mbstring, iconv, posix, fileinfo, filter, ctype, bcmath, calendar, sockets, pcntl, openssl, zlib, dom, xml, simplexml, tokenizer, exif, sodium) | API 19+ |
-| [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay | API 19+ (needs tun) |
+| [speedtest-go](https://github.com/librespeed/speedtest-go) | Self-hosted speed test server | API 19+ |
+| [sshpass](https://sourceforge.net/projects/sshpass/) | Non-interactive SSH password auth | API 19+ |
+| [stubby](https://getdnsapi.net/) | DNS-over-TLS forwarder (getdns) | API 24+ |
+| [stunnel](https://www.stunnel.org/) | TLS/SSL tunneling | API 19+ |
+| [ttyd](https://github.com/tsl0922/ttyd) | Web terminal emulator | API 19+ |
+| [v2ray-core](https://github.com/v2fly/v2ray-core) | Proxy platform (VMess, VLESS, Shadowsocks, etc.) | API 19+ |
+| [vnstat](https://github.com/vergoh/vnstat) | Network traffic monitor | API 19+ |
+| [vnstatd](https://github.com/vergoh/vnstat) | vnstat daemon | API 19+ |
 
 ## Compatibility Notes
 
 | Tool | API 19 | API 21 | API 24 | Notes |
 |------|--------|--------|--------|-------|
-| v2ray-core | ✅ | ✅ | ✅ | Go binary with CGO |
-| openvpn | ✅ | ✅ | ✅ | Needs tun device (`--dev tun`) |
-| vnstat/vnstatd | ✅ | ✅ | ✅ | Requires writeable storage for DB |
-| ttyd | ✅ | ✅ | ✅ | Uses PTY compat shim on API < 23 |
-| sshpass | ✅ | ✅ | ✅ | |
 | badvpn-tun2socks | ✅ | ✅ | ✅ | Needs tun device |
-| jq | ✅ | ✅ | ✅ | |
-| curl | ✅ | ✅ | ✅ | |
-| httping | ✅ | ✅ | ✅ | |
+| badvpn-tun2socks-udprelay | ✅ | ✅ | ✅ | Needs tun device |
 | bash | ✅ | ✅ | ✅ | |
-| speedtest-go | ✅ | ✅ | ✅ | Go binary with CGO |
+| ccminer | N/A (arm64) | N/A (arm64) | ✅ | Only arm64-v8a; uses ARMv8 crypto extensions |
+| corkscrew | ✅ | ✅ | ✅ | |
+| curl | ✅ | ✅ | ✅ | |
 | dnstt-client | ✅ | ✅ | ✅ | |
 | go-tcp-proxy-tunnel | ✅ | ✅ | ✅ | |
-| OpenSSH | ✅ | ✅ | ✅ | Falls back to `/dev/urandom` for RNG |
-| corkscrew | ✅ | ✅ | ✅ | |
-| stunnel | ✅ | ✅ | ✅ | Falls back to OpenSSL RNG |
-| stubby | ❌ | ❌ | ✅ | getdns needs API 24 (getifaddrs, res_nsearch) |
-| ccminer | N/A (arm64) | N/A (arm64) | ✅ | Only arm64-v8a; uses ARMv8 crypto extensions |
+| httping | ✅ | ✅ | ✅ | |
+| jq | ✅ | ✅ | ✅ | |
+| OpenSSH | ✅ | ✅ | ✅ | |
+| openvpn | ✅ | ✅ | ✅ | Needs tun device (`--dev tun`) |
 | php8 | ✅ | ✅ | ✅ | Uses compat stubs for mblen/localeconv/DNS; modules: curl, zip, phar, json, session, mbstring, iconv, posix, fileinfo, filter, ctype, bcmath, calendar, sockets, pcntl, openssl, zlib, dom, xml, simplexml, tokenizer, exif, sodium |
-| badvpn-tun2socks-udprelay | ✅ | ✅ | ✅ | Needs tun device |
+| speedtest-go | ✅ | ✅ | ✅ | Go binary with CGO |
+| sshpass | ✅ | ✅ | ✅ | |
+| stubby | ❌ | ❌ | ✅ | getdns needs API 24 (getifaddrs, res_nsearch) |
+| stunnel | ✅ | ✅ | ✅ | |
+| ttyd | ✅ | ✅ | ✅ | Uses PTY compat shim on API < 23 |
+| v2ray-core | ✅ | ✅ | ✅ | Go binary with CGO |
+| vnstat/vnstatd | ✅ | ✅ | ✅ | Requires writeable storage for DB |
 
 ### API 19 Specifics
 
