@@ -21,6 +21,7 @@ FEOF
 sed -i 's|^bzero(void \*b, size_t n)|#ifdef bzero\n#undef bzero\n#endif\nbzero(void *b, size_t n)|' openbsd-compat/bsd-misc.c
 
 # getifaddrs stub for Android API < 24 (OpenSSH 9.9p1 removed compat fallback)
+# Must compile before configure so LDFLAGS is baked into Makefile
 cat > bsd-getifaddrs.c << 'FEOF'
 #if defined(__ANDROID_API__) && __ANDROID_API__ < 24
 #include <errno.h>
@@ -37,9 +38,10 @@ int getifaddrs(struct ifaddrs **ifap) { *ifap = 0; errno = ENOSYS; return -1; }
 void freeifaddrs(struct ifaddrs *ifa) { (void)ifa; }
 #endif
 FEOF
+$CC $CFLAGS -c bsd-getifaddrs.c -o bsd-getifaddrs.o
 
 export CFLAGS="$CFLAGS -I$DEPS_DIR/zlib/include -I$DEPS_DIR/openssl/include"
-export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib"
+export LDFLAGS="$LDFLAGS -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/openssl/lib $PWD/bsd-getifaddrs.o"
 
 CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   ac_cv_func_getaddrinfo=yes ac_cv_have_int64_t=yes ac_cv_have_u_int64_t=yes ac_cv_have_uint64_t=yes \
@@ -51,10 +53,6 @@ CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --disable-strip --disable-etc-default-login --disable-lastlog --disable-utmp --disable-utmpx \
   --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline --disable-pkcs11 \
   --with-ipaddr-display=none
-
-# Compile getifaddrs stub separately (OpenSSH Makefile won't compile it without HAVE_GETIFADDRS)
-$CC $CFLAGS -c bsd-getifaddrs.c -o bsd-getifaddrs.o
-export LDFLAGS="$LDFLAGS $PWD/bsd-getifaddrs.o"
 
 # Build only client binaries (not sshd which needs extra defines)
 make -j$(nproc) ssh ssh-keygen ssh-keyscan ssh-keysign scp sftp
