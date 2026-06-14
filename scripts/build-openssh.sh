@@ -54,8 +54,8 @@ CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline --disable-pkcs11 \
   --with-ipaddr-display=none
 
-# Build all targets, then copy specific ones
-make -j$(nproc)
+# Build only client binaries (not sshd which needs extra defines)
+make -j$(nproc) ssh ssh-keygen ssh-keyscan ssh-keysign scp sftp
 for f in ssh scp sftp ssh-keygen ssh-keyscan ssh-keysign; do
   [ -f "$f" ] && $STRIP "$f" && cp "$f" "$GITHUB_WORKSPACE/artifacts/"
 done
