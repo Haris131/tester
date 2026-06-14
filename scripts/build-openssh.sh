@@ -54,10 +54,11 @@ CC="$CC" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline --disable-pkcs11 \
   --with-ipaddr-display=none
 
-# Add gc-sections, disable retpolineplt, use noseparate-code + max-page-size=0x4000
-# to match Termux's LOAD layout (3 segments instead of 4, 16K page alignment).
-# Use recursive sed to handle various Makefile formats from configure.
-sed -i '/^LDFLAGS[[:space:]]*=/ s/$/ -Wl,--gc-sections -Wl,-z,noretpolineplt -Wl,-z,noseparate-code -Wl,-z,max-page-size=0x4000/' Makefile
+# Add gc-sections, use noseparate-code + max-page-size=0x4000 to match Termux's
+# LOAD layout (3 segments instead of 4, 16K page alignment).
+# Also remove retpolineplt (unsupported on Android 14+ linker).
+sed -i '/^LDFLAGS[[:space:]]*=/ s/$/ -Wl,--gc-sections -Wl,-z,noseparate-code -Wl,-z,max-page-size=0x4000/' Makefile
+sed -i 's/-Wl,-z,retpolineplt//g' Makefile
 
 # Build only client binaries (not sshd which needs extra defines)
 make -j$(nproc) ssh ssh-keygen ssh-keyscan ssh-keysign scp sftp
