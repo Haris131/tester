@@ -149,6 +149,9 @@ ARCH_OPTS="-march=armv8-a+crypto+sha2+crc -mtune=cortex-a73"
 PERF_OPTS="-Ofast -fstrict-aliasing -ftree-vectorize -funroll-loops -ffinite-loops -finline-functions -fno-stack-protector -fomit-frame-pointer -falign-functions=64"
 CFLAGS="$CFLAGS $ARCH_OPTS $PERF_OPTS"
 CXXFLAGS="$CFLAGS"
+echo "=== testing CFLAGS compilation ==="
+echo 'int main() { return 0; }' | $CC $CFLAGS $CPPFLAGS -x c - -o /dev/null $LDFLAGS $LIBS 2>&1 || echo "=== WARN: CFLAGS test compile FAILED ==="
+echo "=== CFLAGS test done ==="
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
