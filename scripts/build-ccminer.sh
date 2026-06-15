@@ -149,17 +149,15 @@ ARCH_OPTS="-march=armv8-a+crypto+sha2+crc -mtune=cortex-a73"
 PERF_OPTS="-Ofast -fstrict-aliasing -ftree-vectorize -funroll-loops -ffinite-loops -finline-functions -fno-stack-protector -fomit-frame-pointer -falign-functions=64"
 CFLAGS="$CFLAGS $ARCH_OPTS $PERF_OPTS"
 CXXFLAGS="$CFLAGS"
-# Static link libc++ and libomp (OpenMP) so binary is standalone on device
-LDFLAGS="$LDFLAGS -static-libstdc++ -static-openmp"
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
 
-# Add LTO and lld flags to Makefile post-configure (configure test fails with them)
+# Add linker flags to Makefile post-configure (configure test fails with them)
 sed -i '/^CFLAGS[[:space:]]*=/s/$/ -flto/' Makefile
 sed -i '/^CXXFLAGS[[:space:]]*=/s/$/ -flto/' Makefile
-sed -i '/^LDFLAGS[[:space:]]*=/s/$/ -flto -fuse-ld=lld/' Makefile
-echo "=== patched Makefile with LTO flags ==="
+sed -i '/^LDFLAGS[[:space:]]*=/s/$/ -flto -fuse-ld=lld -static-libstdc++ -static-openmp/' Makefile
+echo "=== patched Makefile with LTO/static flags ==="
 
 # Build ccminer with ARMv8 crypto extensions
 echo "=== Building ccminer ==="
