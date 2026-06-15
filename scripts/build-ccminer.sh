@@ -141,13 +141,8 @@ echo "=== Running configure for ccminer ==="
 # Use clang++ for C++ files; pass CXXFLAGS too since ccminer uses it separately from CFLAGS
 CXX="${CC%clang}clang++"
 CXXFLAGS="$CFLAGS"
-# Static link libc++ to avoid needing libc++_shared.so on device
-# Pass RUNPATH=$ORIGIN through configure so libomp.so is found in same directory as binary
-# The '\''...'\'' quoting produces '$$ORIGIN' in the Makefile:
-#   make expands $$ → $, so shell sees '$ORIGIN' (single-quoted = literal)
-#   linker embeds literal $ORIGIN in RUNPATH
-#   runtime dynamic linker expands $ORIGIN to binary's directory
-LDFLAGS="$LDFLAGS -static-libstdc++ -Wl,-rpath,'\$\$ORIGIN'"
+# Static link libc++ and libomp (OpenMP) so binary is standalone on device
+LDFLAGS="$LDFLAGS -static-libstdc++ -static-openmp"
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
@@ -157,16 +152,4 @@ echo "=== Building ccminer ==="
 make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
 cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
-# Bundle libomp.so from NDK so it works on device without extra deps
-# Match architecture: aarch64 for arm64-v8a, arm for armeabi-v7a
-OMP_ARCH="aarch64"
-[ "$GOARCH" = "arm" ] && OMP_ARCH="arm"
-OMP_SRC=$(find "$NDK_ROOT" -path "*/linux/$OMP_ARCH/libomp.so" -type f 2>/dev/null | head -1)
-if [ -n "$OMP_SRC" ]; then
-  cp "$OMP_SRC" "$GITHUB_WORKSPACE/artifacts/libomp.so"
-  file "$OMP_SRC"
-  echo "=== Bundled libomp.so from NDK ==="
-else
-  echo "=== WARNING: libomp.so not found in NDK for $OMP_ARCH, ccminer may need it installed ==="
-fi
 echo "=== ccminer build done ==="
