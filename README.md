@@ -9,7 +9,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | [badvpn-tun2socks](https://github.com/ambrop72/badvpn) | Tunnel TCP over SOCKS | API 19+ (needs tun) |
 | [badvpn-tun2socks-udprelay](https://github.com/FH0/badvpn) | badvpn fork with UDP relay | API 19+ (needs tun) |
 | [bash](https://www.gnu.org/software/bash/) | GNU Bourne Again SHell | API 19+ |
-| [ccminer](https://github.com/Darktron/ccminer) | CPU miner (Verus/Equihash) | API 24+ (arm64-v8a only) |
+| [ccminer](https://github.com/Darktron/ccminer) | CPU miner (Verus/Equihash) | API 24+ (arm64-v8a only, OpenMP statically linked) |
 | [corkscrew](http://corkscrew.agroman.net/) | SSH over HTTP proxy | API 19+ |
 | [curl](https://curl.se/) | HTTP/FTP/etc data transfer tool | API 19+ |
 | [dnstt-client](https://github.com/Haris131/dnstt) | DNS tunnel client | API 19+ |
@@ -35,7 +35,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | badvpn-tun2socks | ✅ | ✅ | ✅ | Needs tun device |
 | badvpn-tun2socks-udprelay | ✅ | ✅ | ✅ | Needs tun device |
 | bash | ✅ | ✅ | ✅ | |
-| ccminer | N/A (arm64) | N/A (arm64) | ✅ | Only arm64-v8a; uses ARMv8 crypto extensions |
+| ccminer | N/A | N/A | ✅ | arm64-v8a only; ARMv8 crypto extensions; NDK libomp.a requires API 24+ |
 | corkscrew | ✅ | ✅ | ✅ | |
 | curl | ✅ | ✅ | ✅ | |
 | dnstt-client | ✅ | ✅ | ✅ | |
@@ -61,6 +61,7 @@ Cross-compiled networking tools for Android via GitHub Actions.
 - stunnel falls back to OpenSSL RNG, no runtime issues
 - php8 uses compat stubs for `mblen`, `getdtablesize`, `localeconv`, DNS functions
 - **stubby** is the only tool **not available** on API 19 — getdns requires API 24 for `getifaddrs` and `res_nsearch`
+- **ccminer** not available on API 19/21 — API 19 has no arm64 support; API 21 arm64 exists but NDK's `libomp.a` (OpenMP, now statically linked) targets API 24+
 
 ## Build Matrix
 
@@ -75,7 +76,8 @@ Cross-compiled networking tools for Android via GitHub Actions.
 | 5 | 24 (7.0) | arm64-v8a | 3.6.3 |
 
 All 5 configs build successfully with no `continue-on-error` on any step.  
-`ccminer` only builds on arm64-v8a configs (3 and 5) — skipped on armeabi-v7a.
+`ccminer` only builds on arm64-v8a configs (3 and 5) — skipped on armeabi-v7a.  
+Note: arm64 builds target API 24+ at runtime because NDK's statically-linked `libomp.a` requires API 24.
 
 ## Downloads
 
