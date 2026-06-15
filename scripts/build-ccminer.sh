@@ -144,9 +144,13 @@ LDFLAGS="$LDFLAGS $LIBS"
 echo "=== Running configure for ccminer ==="
 # Use clang++ for C++ files; pass CXXFLAGS too since ccminer uses it separately from CFLAGS
 CXX="${CC%clang}clang++"
+# ARM64 optimization flags from Darktron/ccminer
+ARCH_OPTS="-march=armv8-a+crypto+sha2+crc -mtune=cortex-a73"
+PERF_OPTS="-Ofast -flto -fstrict-aliasing -ftree-vectorize -funroll-loops -ffinite-loops -finline-functions -fno-stack-protector -fomit-frame-pointer -falign-functions=64"
+CFLAGS="$CFLAGS $ARCH_OPTS $PERF_OPTS"
 CXXFLAGS="$CFLAGS"
 # Static link libc++ and libomp (OpenMP) so binary is standalone on device
-LDFLAGS="$LDFLAGS -static-libstdc++ -static-openmp"
+LDFLAGS="$LDFLAGS -static-libstdc++ -static-openmp -flto -fuse-ld=lld"
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
