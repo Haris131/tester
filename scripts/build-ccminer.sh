@@ -14,6 +14,10 @@ git clone --depth=1 https://github.com/Darktron/ccminer.git
 cd ccminer
 echo "=== ccminer cloned successfully ==="
 
+# Add credit line after Termux pre-compiled by Darktron
+sed -i '/printf("Termux pre-compiled by Darktron\\n");/a\        printf("Android API 24+ pre-compiled by Haris131\\n");' ccminer.cpp
+echo "=== patched ccminer.cpp with Android credit ==="
+
 [ -d compat/jansson ] || mkdir -p compat/jansson
 
 # Pre-create jansson config headers for cross-compilation
