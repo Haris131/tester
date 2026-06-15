@@ -142,13 +142,15 @@ echo "=== Running configure for ccminer ==="
 CXX="${CC%clang}clang++"
 CXXFLAGS="$CFLAGS"
 # Static link libc++ to avoid needing libc++_shared.so on device
-LDFLAGS="$LDFLAGS -static-libstdc++"
+# Pass RUNPATH=$ORIGIN through configure so libomp.so is found in same directory as binary
+# The '\''...'\'' quoting produces '$$ORIGIN' in the Makefile:
+#   make expands $$ → $, so shell sees '$ORIGIN' (single-quoted = literal)
+#   linker embeds literal $ORIGIN in RUNPATH
+#   runtime dynamic linker expands $ORIGIN to binary's directory
+LDFLAGS="$LDFLAGS -static-libstdc++ -Wl,-rpath,'\$\$ORIGIN'"
 ./configure --host="$HOST" CC="$CC" CXX="$CXX" CPPFLAGS="$CPPFLAGS" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
   --with-cuda=no --enable-openmp
 echo "=== configure completed ==="
-
-# Add RUNPATH=$ORIGIN after configure so Make doesn't eat the $ sign
-sed -i 's|^LDFLAGS[[:space:]]*=[[:space:]]*\(.*\)|\0 -Wl,-rpath,\$\$ORIGIN|' Makefile
 
 # Build ccminer with ARMv8 crypto extensions
 echo "=== Building ccminer ==="
