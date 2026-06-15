@@ -155,5 +155,5 @@ echo "=== configure completed ==="
 echo "=== Building ccminer ==="
 make -j$(nproc)
 $STRIP ccminer 2>/dev/null || true
-cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer-crypto"
+cp ccminer "$GITHUB_WORKSPACE/artifacts/ccminer"
 echo "=== ccminer build done ==="
