@@ -227,6 +227,9 @@ jobs:
       - name: Build ccminer
         run: bash $SCRIPTS_DIR/build-ccminer.sh
 
+      - name: Build cpuminer-opt
+        run: bash $SCRIPTS_DIR/build-cpuminer-opt.sh
+
       - name: Package
         run: bash $SCRIPTS_DIR/package.sh
 
