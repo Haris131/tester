@@ -17,7 +17,10 @@ echo "=== cpuminer-opt cloned successfully ==="
 
 # Build GMP (needed by cpuminer-opt)
 echo "=== Building GMP $GMP_VER ==="
-curl -sL --retry 5 --retry-delay 10 https://gmplib.org/download/gmp/gmp-$GMP_VER.tar.xz -o /tmp/gmp.tar.xz
+curl -sL --connect-timeout 30 --max-time 120 --retry 3 --retry-delay 5 \
+  https://gmplib.org/download/gmp/gmp-$GMP_VER.tar.xz -o /tmp/gmp.tar.xz || \
+curl -sL --connect-timeout 30 --max-time 120 \
+  https://ftp.gnu.org/gnu/gmp/gmp-$GMP_VER.tar.xz -o /tmp/gmp.tar.xz
 tar xJf /tmp/gmp.tar.xz
 cd gmp-$GMP_VER
 ABI=64 ./configure --host="$HOST" CC="$CC" AR="$AR" RANLIB="$RANLIB" --disable-shared --enable-static --prefix="$GITHUB_WORKSPACE/deps/gmp"
