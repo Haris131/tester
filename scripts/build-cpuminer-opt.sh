@@ -58,6 +58,7 @@ echo "=== configure completed ==="
 sed -i '/^CFLAGS[[:space:]]*=/s/$/ -flto/' Makefile
 sed -i '/^CXXFLAGS[[:space:]]*=/s/$/ -flto/' Makefile
 sed -i '/^LDFLAGS[[:space:]]*=/s/$/ -flto -fuse-ld=lld -static-libstdc++ -static-openmp/' Makefile
+sed -i '/^cpuminer_LDADD[[:space:]]*=/s/$/ -lssl -lcrypto/' Makefile
 echo "=== patched Makefile with LTO/static flags ==="
 
 echo "=== Building cpuminer-opt ==="
