@@ -33,8 +33,8 @@ echo "=== autogen completed ==="
 # Set up library paths (reuse existing deps from workflow)
 export PKG_CONFIG_PATH="$DEPS_DIR/curl/lib/pkgconfig:$DEPS_DIR/openssl/lib/pkgconfig:$DEPS_DIR/zlib/lib/pkgconfig"
 
-INCS="-I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR/curl/include"
-LIBS="-L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib"
+INCS="-I$DEPS_DIR/openssl/include -I$DEPS_DIR/zlib/include -I$DEPS_DIR/curl/include -I$GITHUB_WORKSPACE/deps/gmp/include"
+LIBS="-L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib -L$GITHUB_WORKSPACE/deps/gmp/lib"
 export CPPFLAGS="$CPPFLAGS $INCS"
 
 # Architecture & optimization flags (same as ccminer)
@@ -46,8 +46,8 @@ CXX="${CC%clang}clang++"
 
 echo "=== Running configure for cpuminer-opt ==="
 CFLAGS="$CFLAGS $ARCH_OPTS $PERF_OPTS $INCS" \
-CXXFLAGS="$CFLAGS" \
-LDFLAGS="$LDFLAGS $LIBS -L$GITHUB_WORKSPACE/deps/gmp/lib" \
+CXXFLAGS="$CXXFLAGS $ARCH_OPTS $PERF_OPTS $INCS" \
+LDFLAGS="$LDFLAGS $LIBS" \
 ./configure \
   --host="$HOST" \
   CC="$CC" CXX="$CXX" \
