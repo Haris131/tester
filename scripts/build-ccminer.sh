@@ -145,7 +145,7 @@ echo "=== Running configure for ccminer ==="
 # Use clang++ for C++ files; pass CXXFLAGS too since ccminer uses it separately from CFLAGS
 CXX="${CC%clang}clang++"
 # ARM64 optimization flags from Darktron/ccminer
-ARCH_OPTS="-march=armv8-a+crypto+sha2+crc"
+ARCH_OPTS="-march=armv8-a+crypto+crc"
 PERF_OPTS="-Ofast -fstrict-aliasing -ftree-vectorize -funroll-loops -finline-functions -fno-stack-protector -fomit-frame-pointer -falign-functions=64"
 CFLAGS="$CFLAGS $ARCH_OPTS $PERF_OPTS"
 CXXFLAGS="$CFLAGS"
