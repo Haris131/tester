@@ -42,8 +42,8 @@ LIBS="-L$DEPS_DIR/openssl/lib -L$DEPS_DIR/zlib/lib -L$DEPS_DIR/curl/lib -L$GITHU
 export CPPFLAGS="$CPPFLAGS $INCS"
 
 # Architecture & optimization flags (same as ccminer)
-ARCH_OPTS="-march=armv8-a+crypto+sha2+crc -mtune=cortex-a73"
-PERF_OPTS="-Ofast -fstrict-aliasing -ftree-vectorize -funroll-loops -finline-functions -fomit-frame-pointer -falign-functions=64"
+ARCH_OPTS="-march=armv8-a+crypto+sha2+crc"
+PERF_OPTS="-Ofast -fstrict-aliasing -ftree-vectorize -funroll-loops -finline-functions -fomit-frame-pointer -falign-functions=64 -flax-vector-conversions"
 
 # Use clang for both CC and CXX
 CXX="${CC%clang}clang++"
