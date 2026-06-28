@@ -1,11 +1,11 @@
 # Build OpenCode for Android ARM64
 #
+# Downloads a pre-built Android ARM64 bun binary, clones anomalyco/opencode,
+# builds the standalone binary, and packages everything.
+#
 # References:
 #   - guysoft/opencode-termux  — full cross-compilation with NDK
 #   - Hope2333/opencode-termux — bun build --compile approach
-#
-# Downloads a pre-built Android ARM64 bun binary, clones anomalyco/opencode,
-# builds the standalone binary, and packages everything.
 
 name: Build OpenCode for Android
 
@@ -28,11 +28,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [aarch64]
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v4
 
@@ -50,10 +45,15 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Set env from inputs
+        run: |
+          echo "OPENCODE_REF=${{ github.event.inputs.opencode_ref || 'dev' }}" >> "$GITHUB_ENV"
+          echo "OPENCODE_VER=${{ github.event.inputs.opencode_version || 'dev' }}" >> "$GITHUB_ENV"
+
       - name: Clone upstream OpenCode
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch "${{ github.event.inputs.opencode_ref || 'dev' }}" \
+          git clone --depth 1 --branch "$OPENCODE_REF" \
             https://github.com/${{ env.OPENCODE_REPO }}.git out/build/opencode-source
 
       - name: Build OpenCode standalone binary
@@ -63,13 +63,11 @@ jobs:
           bun install 2>&1 | tail -5
           cd packages/opencode
           bun run build --target=linux-arm64 2>&1 | tail -20
-          # Locate built binary
           BIN="$(find ../.. -name 'opencode-linux-arm64' -type f 2>/dev/null | head -1)" || true
           if [[ -n "$BIN" ]]; then
             cp "$BIN" "$GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64"
             file "$GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64"
           else
-            echo "Trying dist/ for output..."
             ls -la dist/ 2>/dev/null || true
             find ../.. -name 'opencode*' -type f 2>/dev/null || true
           fi
@@ -77,7 +75,6 @@ jobs:
       - name: Download Android ARM64 Bun
         run: |
           set -euo pipefail
-          echo "Downloading Android ARM64 bun from ${{ env.BUN_ANDROID_URL }}"
           curl -fL "${{ env.BUN_ANDROID_URL }}" -o out/bundle/bun-android-arm64
           chmod +x out/bundle/bun-android-arm64
           file out/bundle/bun-android-arm64
@@ -88,32 +85,24 @@ jobs:
           mkdir -p out/package
           cd out/package
 
-          OPENCODE_VERSION="${{ github.event.inputs.opencode_version || 'dev' }}"
-
-          # Copy OpenCode binary if built
           if [[ -f "$GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64" ]]; then
             cp "$GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64" ./opencode
             chmod +x ./opencode
           fi
-
-          # Copy Android bun
           cp "$GITHUB_WORKSPACE/out/bundle/bun-android-arm64" ./bun
           chmod +x ./bun
 
-          # Create wrapper script
-          cat > opencode-wrapper.sh << 'SHELL'
+          cat > opencode-wrapper.sh << 'WRAPPER'
 #!/data/data/com.termux/files/usr/bin/bash
-# OpenCode wrapper for Termux — uses bundled Android bun
 DIR="$(cd "$(dirname "$0")" && pwd)"
 exec "$DIR/bun" run "$DIR/opencode" "$@"
-SHELL
+WRAPPER
           chmod +x opencode-wrapper.sh
 
-          # Create README
-          cat > README.md << EOF
+          cat > README.md << READMEEOF
 # OpenCode for Android ARM64
 
-- **OpenCode**: built from anomalyco/opencode@\${{ github.event.inputs.opencode_ref || 'dev' }}
+- **OpenCode**: built from anomalyco/opencode@${OPENCODE_REF}
 - **Bun**: Android ARM64 (v1.17.10)
 - **Architecture**: aarch64
 
@@ -125,16 +114,15 @@ Extract the archive and run:
 chmod +x opencode-wrapper.sh
 ./opencode-wrapper.sh --help
 \`\`\`
-EOF
+READMEEOF
 
-          # Package as zip
           cd "$GITHUB_WORKSPACE/out"
-          zip -r "opencode-android-arm64-${OPENCODE_VERSION}.zip" package/
-          ls -lh "opencode-android-arm64-${OPENCODE_VERSION}.zip"
+          zip -r "opencode-android-arm64-${OPENCODE_VER}.zip" package/
+          ls -lh "opencode-android-arm64-${OPENCODE_VER}.zip"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-android-${{ matrix.arch }}
+          name: opencode-android-aarch64
           path: out/opencode-android-arm64-*.zip
           retention-days: 30
