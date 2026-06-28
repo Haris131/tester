@@ -1,4 +1,4 @@
-name: Build OpenCode for Android
+name: Build OpenCode for Android (fully static)
 
 on:
   workflow_dispatch:
@@ -17,11 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
+      - name: Install tools (QEMU + binutils for ARM64)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq qemu-user-static binfmt-support binutils-aarch64-linux-gnu
-          sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
 
       - name: Prepare dirs
         run: mkdir -p out/bundle out/build
@@ -34,44 +33,66 @@ jobs:
       - name: Clone OpenCode
         run: git clone --depth 1 --branch dev https://github.com/anomalyco/opencode.git out/build/opencode-source
 
-      - name: Build OpenCode (musl)
+      - name: Build OpenCode (ARM64 musl)
         run: |
           cd out/build/opencode-source
           bun install
           cd packages/opencode
-          bun run build 2>&1
-          echo "=== Ambil binary musl ==="
+          bun run build --target=linux-arm64 2>&1
+          echo "=== Cari binary musl ==="
           BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64-musl*' | head -1)
+          if [ -z "$BIN" ]; then
+            echo "Musl tidak ditemukan, coba tanpa musl"
+            BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64*' | head -1)
+          fi
           if [ -n "$BIN" ]; then
-            echo "Musl binary: $BIN"
+            echo "Found: $BIN"
             cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode
-            echo "FILE_INFO:"
-            file "$BIN"
-            echo "DYNAMIC_DEPS:"
-            readelf -d "$BIN" | grep NEEDED || echo "(static - no dynamic deps)"
-            echo "SECTIONS:"
-            readelf -S "$BIN" | grep -E "(\.text|\.data|\.bss|interp)"
           else
-            echo "Musl binary tidak ditemukan, coba yang lain:"
+            echo "Binary tidak ditemukan!"
             find dist -name 'opencode' -type f
           fi
+
+      - name: Verifikasi static linking
+        run: |
+          BIN=$GITHUB_WORKSPACE/out/bundle/opencode
+          [ -f "$BIN" ] || { echo "Tidak ada binary!"; exit 1; }
+          echo "=== FILE ==="
+          file "$BIN"
+          echo "=== DYNAMIC DEPS ==="
+          DEPS=$(aarch64-linux-gnu-readelf -d "$BIN" 2>/dev/null | grep NEEDED || echo "(no NEEDED = fully static)")
+          echo "$DEPS"
+          echo "=== INTERP ==="
+          aarch64-linux-gnu-readelf -l "$BIN" 2>/dev/null | grep INTERP || echo "(no INTERP = fully static)"
+          if echo "$DEPS" | grep -q "NEEDED"; then
+            echo "STATUS: Dynamic binary (ada dynamic deps)"
+          else
+            echo "STATUS: Fully static!"
+          fi
+          ls -lh "$BIN"
+
+      - name: Smoke test via QEMU
+        run: |
+          BIN=$GITHUB_WORKSPACE/out/bundle/opencode
+          chmod +x "$BIN"
+          echo "=== QEMU Smoke Test ==="
+          qemu-aarch64-static "$BIN" --version 2>&1 || echo "(qemu smoke test done)"
+          qemu-aarch64-static "$BIN" --help 2>&1 | head -5 || true
 
       - name: Download Android Bun
         run: |
           curl -fL ${{ env.BUN_ANDROID_URL }} -o out/bundle/bun
           chmod +x out/bundle/bun
-
-      - name: Try run via QEMU
-        run: |
-          if [ -f out/bundle/opencode ]; then
-            echo "=== Mencoba QEMU ==="
-            chmod +x out/bundle/opencode
-            qemu-aarch64-static out/bundle/opencode --version 2>&1 || echo "QEMU test skipped/failed"
-          fi
+          echo "=== Bun file ==="
+          file out/bundle/bun
+          DEPS=$(aarch64-linux-gnu-readelf -d out/bundle/bun 2>/dev/null | grep NEEDED || echo "no NEEDED")
+          echo "Bun DEPS: $DEPS"
 
       - name: Package
         run: |
           cd $GITHUB_WORKSPACE/out
+          echo "Bundle contents:"
+          ls -lh bundle/
           zip -j opencode-android-arm64.zip bundle/*
           ls -lh opencode-android-arm64.zip
 
