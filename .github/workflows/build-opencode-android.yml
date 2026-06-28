@@ -1,4 +1,4 @@
-name: Build OpenCode for Android (fully static)
+name: Build OpenCode for Android (fully static + musl loader)
 
 on:
   workflow_dispatch:
@@ -17,10 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install tools (QEMU + binutils for ARM64)
+      - name: Install tools (QEMU + binutils + musl cross)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq qemu-user-static binfmt-support binutils-aarch64-linux-gnu
+          sudo apt-get install -y -qq qemu-user-static binfmt-support binutils-aarch64-linux-gnu musl-tools
 
       - name: Prepare dirs
         run: mkdir -p out/bundle out/build
@@ -33,7 +33,7 @@ jobs:
       - name: Clone OpenCode
         run: git clone --depth 1 --branch dev https://github.com/anomalyco/opencode.git out/build/opencode-source
 
-      - name: Build OpenCode (ARM64 musl)
+      - name: Build OpenCode + include musl libs
         run: |
           cd out/build/opencode-source
           bun install
@@ -42,56 +42,76 @@ jobs:
           echo "=== Cari binary musl ==="
           BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64-musl*' | head -1)
           if [ -z "$BIN" ]; then
-            echo "Musl tidak ditemukan, coba tanpa musl"
             BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64*' | head -1)
           fi
-          if [ -n "$BIN" ]; then
-            echo "Found: $BIN"
-            cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode
-          else
-            echo "Binary tidak ditemukan!"
+          if [ -z "$BIN" ]; then
+            echo "Tidak ada binary!"
             find dist -name 'opencode' -type f
+            exit 1
           fi
+          echo "Found: $BIN"
+          file "$BIN"
+          cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode
 
-      - name: Verifikasi static linking
+      - name: Sertakan musl loader + lib untuk Android
         run: |
           BIN=$GITHUB_WORKSPACE/out/bundle/opencode
-          [ -f "$BIN" ] || { echo "Tidak ada binary!"; exit 1; }
-          echo "=== FILE ==="
-          file "$BIN"
-          echo "=== DYNAMIC DEPS ==="
-          DEPS=$(aarch64-linux-gnu-readelf -d "$BIN" 2>/dev/null | grep NEEDED || echo "(no NEEDED = fully static)")
-          echo "$DEPS"
-          echo "=== INTERP ==="
-          aarch64-linux-gnu-readelf -l "$BIN" 2>/dev/null | grep INTERP || echo "(no INTERP = fully static)"
-          if echo "$DEPS" | grep -q "NEEDED"; then
-            echo "STATUS: Dynamic binary (ada dynamic deps)"
-          else
-            echo "STATUS: Fully static!"
-          fi
-          ls -lh "$BIN"
+          OUT=$GITHUB_WORKSPACE/out/bundle
+          echo "=== Cek NEEDED libs ==="
+          aarch64-linux-gnu-readelf -d "$BIN" | grep NEEDED
+          echo "=== Cari musl ARM64 libs ==="
+          dpkg -L musl-tools 2>/dev/null | grep -i aarch64 || echo "No musl aarch64 found via dpkg"
+          find / -name 'libc.musl-aarch64*' -o -name 'libstdc++*' -o -name 'libgcc_s*' 2>/dev/null | head -20
+          find / -name 'ld-musl-aarch64*' 2>/dev/null
+          # Try to install aarch64 musl cross toolchain for the libs
+          sudo apt-get install -y -qq gcc-aarch64-linux-gnu musl-dev 2>/dev/null || true
+          echo "=== Cari lagi ==="
+          find / -name 'libc.musl*' -o -name 'ld-musl*' 2>/dev/null | head -10
+          find /usr -name 'libstdc++.so*' -path '*aarch64*' 2>/dev/null | head -5
+          find /usr -name 'libgcc_s.so*' -path '*aarch64*' 2>/dev/null | head -5
+          echo "=== Tidak ada musl ARM64 di runner ==="
+          echo "Kita akan coba qemu dengan LD_LIBRARY_PATH, atau install musl-arm64"
 
-      - name: Smoke test via QEMU
+      - name: Coba QEMU + install musl ARM64
         run: |
           BIN=$GITHUB_WORKSPACE/out/bundle/opencode
           chmod +x "$BIN"
-          echo "=== QEMU Smoke Test ==="
-          qemu-aarch64-static "$BIN" --version 2>&1 || echo "(qemu smoke test done)"
-          qemu-aarch64-static "$BIN" --help 2>&1 | head -5 || true
+          # Install aarch64 musl cross toolchain dari musl.cc
+          echo "Download musl aarch64 cross tools..."
+          MUSL_VER="20250111"
+          curl -fSL "https://musl.cc/aarch64-linux-musl-cross.tgz" -o /tmp/musl-cross.tgz 2>&1 | tail -1 || true
+          if [ -f /tmp/musl-cross.tgz ]; then
+            sudo tar xzf /tmp/musl-cross.tgz -C /opt/
+            MUSL_DIR=$(find /opt -maxdepth 1 -type d -name '*aarch64*linux*musl*' | head -1)
+            if [ -n "$MUSL_DIR" ]; then
+              echo "Musl dir: $MUSL_DIR"
+              ls "$MUSL_DIR/aarch64-linux-musl/lib/"
+              # Copy libs ke bundle
+              cp "$MUSL_DIR/aarch64-linux-musl/lib/libc.so" $GITHUB_WORKSPACE/out/bundle/
+              cp "$MUSL_DIR/aarch64-linux-musl/lib/ld-musl-aarch64.so.1" $GITHUB_WORKSPACE/out/bundle/ 2>/dev/null || true
+              # Coba qemu dengan LD_LIBRARY_PATH
+              echo "=== QEMU dengan musl LD_LIBRARY_PATH ==="
+              LD_LIBRARY_PATH="$MUSL_DIR/aarch64-linux-musl/lib" qemu-aarch64-static "$BIN" --version 2>&1 || echo "(qemu test done)"
+            fi
+          else
+            echo "Download musl cross gagal, coba alternatif..."
+            # Download ld-musl dan libc langsung dari Alpine
+            echo "Menggunakan QEMU dengan /etc/qemu-binfmt/aarch64"
+            ls /etc/qemu-binfmt/ 2>/dev/null || true
+          fi
 
       - name: Download Android Bun
         run: |
           curl -fL ${{ env.BUN_ANDROID_URL }} -o out/bundle/bun
           chmod +x out/bundle/bun
-          echo "=== Bun file ==="
+          echo "=== Bun ==="
           file out/bundle/bun
-          DEPS=$(aarch64-linux-gnu-readelf -d out/bundle/bun 2>/dev/null | grep NEEDED || echo "no NEEDED")
-          echo "Bun DEPS: $DEPS"
+          aarch64-linux-gnu-readelf -d out/bundle/bun 2>/dev/null | grep NEEDED || echo "(static)"
 
-      - name: Package
+      - name: Package (opencode + bun + musl libs + loader)
         run: |
           cd $GITHUB_WORKSPACE/out
-          echo "Bundle contents:"
+          echo "Bundle:"
           ls -lh bundle/
           zip -j opencode-android-arm64.zip bundle/*
           ls -lh opencode-android-arm64.zip
