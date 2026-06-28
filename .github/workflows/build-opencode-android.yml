@@ -2,10 +2,6 @@
 #
 # Downloads a pre-built Android ARM64 bun binary, clones anomalyco/opencode,
 # builds the standalone binary, and packages everything.
-#
-# References:
-#   - guysoft/opencode-termux  — full cross-compilation with NDK
-#   - Hope2333/opencode-termux — bun build --compile approach
 
 name: Build OpenCode for Android
 
@@ -45,15 +41,10 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Set env from inputs
-        run: |
-          echo "OPENCODE_REF=${{ github.event.inputs.opencode_ref || 'dev' }}" >> "$GITHUB_ENV"
-          echo "OPENCODE_VER=${{ github.event.inputs.opencode_version || 'dev' }}" >> "$GITHUB_ENV"
-
-      - name: Clone upstream OpenCode
+      - name: Clone OpenCode source
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch "$OPENCODE_REF" \
+          git clone --depth 1 --branch dev \
             https://github.com/${{ env.OPENCODE_REPO }}.git out/build/opencode-source
 
       - name: Build OpenCode standalone binary
@@ -68,7 +59,6 @@ jobs:
             cp "$BIN" "$GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64"
             file "$GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64"
           else
-            ls -la dist/ 2>/dev/null || true
             find ../.. -name 'opencode*' -type f 2>/dev/null || true
           fi
 
@@ -79,7 +69,7 @@ jobs:
           chmod +x out/bundle/bun-android-arm64
           file out/bundle/bun-android-arm64
 
-      - name: Create distribution package
+      - name: Create package
         run: |
           set -euo pipefail
           mkdir -p out/package
@@ -99,10 +89,10 @@ exec "$DIR/bun" run "$DIR/opencode" "$@"
 WRAPPER
           chmod +x opencode-wrapper.sh
 
-          cat > README.md << READMEEOF
+          cat > README.md << 'READMEEND'
 # OpenCode for Android ARM64
 
-- **OpenCode**: built from anomalyco/opencode@${OPENCODE_REF}
+- **OpenCode**: built from anomalyco/opencode@dev
 - **Bun**: Android ARM64 (v1.17.10)
 - **Architecture**: aarch64
 
@@ -110,19 +100,19 @@ WRAPPER
 
 Extract the archive and run:
 
-\`\`\`bash
+```bash
 chmod +x opencode-wrapper.sh
 ./opencode-wrapper.sh --help
-\`\`\`
-READMEEOF
+```
+READMEEND
 
           cd "$GITHUB_WORKSPACE/out"
-          zip -r "opencode-android-arm64-${OPENCODE_VER}.zip" package/
-          ls -lh "opencode-android-arm64-${OPENCODE_VER}.zip"
+          zip -r opencode-android-arm64.zip package/
+          ls -lh opencode-android-arm64.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: opencode-android-aarch64
-          path: out/opencode-android-arm64-*.zip
+          path: out/opencode-android-arm64.zip
           retention-days: 30
