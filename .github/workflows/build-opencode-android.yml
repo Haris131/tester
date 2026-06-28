@@ -44,16 +44,15 @@ jobs:
           bun install
           cd packages/opencode
           bun run build --target=linux-arm64 2>&1
-          echo "=== Looking for binary ==="
-          find ../.. -name 'opencode-linux-arm64*' -type f
-          BIN=$(find ../.. -name 'opencode-linux-arm64*' -type f | head -1)
+          echo "=== Looking for arm64 binary ==="
+          find dist -name 'opencode' -type f -path '*linux-arm64*' -exec file {} \;
+          BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64*' | head -1)
           if [ -n "$BIN" ]; then
             echo "Found binary: $BIN"
             cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64
           else
-            echo "Binary not found, listing dist:"
-            ls -la dist/ 2>/dev/null || echo "no dist/"
-            find ../.. -name 'opencode*' -type f 2>/dev/null || echo "no opencode files found"
+            echo "No arm64 binary found, listing all binaries:"
+            find dist -name 'opencode' -type f
           fi
 
       - name: Download Android Bun
@@ -68,9 +67,6 @@ jobs:
           if [ -f $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64 ]; then
             cp $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64 ./opencode
             chmod +x ./opencode
-            echo "Added opencode binary"
-          else
-            echo "WARNING: opencode binary not found, packaging bun only"
           fi
           cp $GITHUB_WORKSPACE/out/bundle/bun-android-arm64 ./bun
           chmod +x ./bun
