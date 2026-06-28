@@ -45,13 +45,12 @@ jobs:
           cd packages/opencode
           bun run build --target=linux-arm64 2>&1
           echo "=== Looking for arm64 binary ==="
-          find dist -name 'opencode' -type f -path '*linux-arm64*' -exec file {} \;
           BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64*' | head -1)
           if [ -n "$BIN" ]; then
             echo "Found binary: $BIN"
             cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64
           else
-            echo "No arm64 binary found, listing all binaries:"
+            echo "No arm64 binary found, listing all:"
             find dist -name 'opencode' -type f
           fi
 
@@ -70,11 +69,9 @@ jobs:
           fi
           cp $GITHUB_WORKSPACE/out/bundle/bun-android-arm64 ./bun
           chmod +x ./bun
-          cat > opencode-wrapper.sh << 'WRAP'
-          #!/data/data/com.termux/files/usr/bin/bash
-          DIR="$(cd "$(dirname "$0")" && pwd)"
-          exec "$DIR/bun" run "$DIR/opencode" "$@"
-          WRAP
+          echo '#!/data/data/com.termux/files/usr/bin/bash' > opencode-wrapper.sh
+          echo 'DIR="$(cd "$(dirname "$0")" && pwd)"' >> opencode-wrapper.sh
+          echo 'exec "$DIR/bun" run "$DIR/opencode" "$@"' >> opencode-wrapper.sh
           chmod +x opencode-wrapper.sh
           cd $GITHUB_WORKSPACE/out
           zip -r opencode-android-arm64.zip package/
