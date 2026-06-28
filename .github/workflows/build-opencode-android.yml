@@ -7,10 +7,6 @@ on:
         description: Upstream branch/tag
         required: false
         default: dev
-      opencode_version:
-        description: Version tag for output
-        required: false
-        default: ''
 
 env:
   BUN_ANDROID_URL: https://github.com/Haris131/opencode-termux/releases/download/v1.17.10/bun
@@ -38,43 +34,31 @@ jobs:
       - name: Clone OpenCode
         run: git clone --depth 1 --branch dev https://github.com/anomalyco/opencode.git out/build/opencode-source
 
-      - name: Build OpenCode
+      - name: Build OpenCode (musl)
         run: |
           cd out/build/opencode-source
           bun install
           cd packages/opencode
           bun run build --target=linux-arm64 2>&1
-          echo "=== Looking for arm64 binary ==="
-          BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64*' | head -1)
+          echo "=== Ambil binary musl ==="
+          BIN=$(find dist -name 'opencode' -type f -path '*linux-arm64-musl*' | head -1)
           if [ -n "$BIN" ]; then
-            echo "Found binary: $BIN"
-            cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64
+            echo "Musl binary: $BIN"
+            cp "$BIN" $GITHUB_WORKSPACE/out/bundle/opencode
           else
-            echo "No arm64 binary found, listing all:"
+            echo "Musl binary tidak ditemukan, coba yang lain:"
             find dist -name 'opencode' -type f
           fi
 
       - name: Download Android Bun
         run: |
-          curl -fL ${{ env.BUN_ANDROID_URL }} -o out/bundle/bun-android-arm64
-          chmod +x out/bundle/bun-android-arm64
+          curl -fL ${{ env.BUN_ANDROID_URL }} -o out/bundle/bun
+          chmod +x out/bundle/bun
 
-      - name: Package
+      - name: Package (tanpa wrapper)
         run: |
-          mkdir -p out/package
-          cd out/package
-          if [ -f $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64 ]; then
-            cp $GITHUB_WORKSPACE/out/bundle/opencode-linux-arm64 ./opencode
-            chmod +x ./opencode
-          fi
-          cp $GITHUB_WORKSPACE/out/bundle/bun-android-arm64 ./bun
-          chmod +x ./bun
-          echo '#!/data/data/com.termux/files/usr/bin/bash' > opencode-wrapper.sh
-          echo 'DIR="$(cd "$(dirname "$0")" && pwd)"' >> opencode-wrapper.sh
-          echo 'exec "$DIR/bun" run "$DIR/opencode" "$@"' >> opencode-wrapper.sh
-          chmod +x opencode-wrapper.sh
           cd $GITHUB_WORKSPACE/out
-          zip -r opencode-android-arm64.zip package/
+          zip -j opencode-android-arm64.zip bundle/*
           ls -lh opencode-android-arm64.zip
 
       - name: Upload artifacts
