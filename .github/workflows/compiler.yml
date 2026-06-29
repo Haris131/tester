@@ -39,5 +39,5 @@ jobs:
         with:
           name: compiled
           path: |
-            ${{ runner.HOME }}/.local/*/opencode
+            ${{ runner.home }}/.local/*/opencode
             ${{ github.workspace }}/*
