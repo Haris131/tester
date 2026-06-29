@@ -41,5 +41,4 @@ jobs:
           include-hidden-files: true
           path: |
             ~/.local/*/opencode
-            ${{ runner.home }}/.config/*
             ${{ github.workspace }}/*
