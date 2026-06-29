@@ -34,11 +34,8 @@ jobs:
           limit-access-to-actor: true 
           wait-timeout-minutes: 5
 
-      - name: Prepare artifacts
-        run: mkdir artifacts && mv *.xz artifacts/
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
           name: compiled
-          path: artifacts/*
+          path: $GITHUB_WORKSPACE/*
