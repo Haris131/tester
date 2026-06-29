@@ -31,13 +31,16 @@ jobs:
         uses: owenthereal/action-upterm@v1
         if: ${{ github.event_name == 'workflow_dispatch' }}  # Hanya jalan saat manual
         with:
-          limit-access-to-actor: true 
+          limit-access-to-actor: true
           wait-timeout-minutes: 5
 
+      - name: check
+        run: ls ${{ runner.home }}/.local/*/opencode
+            
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
           name: compiled
           path: |
-            ${{ runner.home }}/.local/*/opencode
+            ${{ runner.home }}/.local/*/opencode    
             ${{ github.workspace }}/*
