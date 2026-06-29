@@ -39,5 +39,5 @@ jobs:
         with:
           name: compiled
           path: |
-            $HOME/.local/*/opencode
-            $GITHUB_WORKSPACE/*
+            ${{ env.HOME }}/.local/*/opencode
+            ${{ github.workspace }}/*
