@@ -33,14 +33,13 @@ jobs:
         with:
           limit-access-to-actor: true
           wait-timeout-minutes: 5
-
-      - name: check
-        run: ls ~/.local/*/opencode
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
           name: compiled
+          include-hidden-files: true
           path: |
-            ~/.local/*/opencode    
+            ~/.local/*/opencode
+            ${{ runner.home }}/.config/*
             ${{ github.workspace }}/*
