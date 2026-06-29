@@ -38,4 +38,6 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: compiled
-          path: $GITHUB_WORKSPACE/*
+          path: |
+            $HOME/.local/*/opencode
+            $GITHUB_WORKSPACE/*
