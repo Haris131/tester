@@ -20,7 +20,7 @@ jobs:
           sudo apt-get clean
           sudo sed -i '/NVM_DIR/d;/skel/d' /root/{.bashrc,.profile}
           sudo rm -rf ~/{.cargo,.dotnet,.rustup}
-          sudo timedatectl set-timezone Asia/Jakarta
+          # sudo timedatectl set-timezone Asia/Jakarta
           sudo hostnamectl set-hostname chewy
           curl -fsSL https://opencode.ai/install | bash
 
