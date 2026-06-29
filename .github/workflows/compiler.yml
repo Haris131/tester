@@ -35,12 +35,12 @@ jobs:
           wait-timeout-minutes: 5
 
       - name: check
-        run: ls ${{ runner.home }}/.local/*/opencode
+        run: ls ~/.local/*/opencode
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
           name: compiled
           path: |
-            ${{ runner.home }}/.local/*/opencode    
+            ~/.local/*/opencode    
             ${{ github.workspace }}/*
