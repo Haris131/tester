@@ -7,6 +7,7 @@ jobs:
   build:
     name: Ubuntu Server
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Prepare
         run: |
