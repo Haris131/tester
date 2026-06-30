@@ -28,13 +28,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Configure git to use GITHUB_TOKEN
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
       - name: Setup upterm session
         uses: owenthereal/action-upterm@v1
-        if: ${{ github.event_name == 'workflow_dispatch' }}  # Hanya jalan saat manual
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
           limit-access-to-actor: true
           wait-timeout-minutes: 5
