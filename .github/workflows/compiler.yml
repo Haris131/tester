@@ -50,5 +50,7 @@ jobs:
           name: compiled
           include-hidden-files: true
           path: |
+            ~/.claude
+            ~/.reasonix
             ~/.local/*/opencode
             ${{ github.workspace }}/*
