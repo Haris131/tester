@@ -22,10 +22,15 @@ jobs:
           sudo rm -rf ~/{.cargo,.dotnet,.rustup}
           # sudo timedatectl set-timezone Asia/Jakarta
           sudo hostnamectl set-hostname chewy
-          curl -fsSL https://opencode.ai/install | bash
 
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Setup for AI Code
+        run: |
+          curl -fsSL https://opencode.ai/install | bash
+          curl -fsSL https://claude.ai/install.sh | bash
+          npm i -g reasonix@next
 
       - name: Setup upterm session
         uses: owenthereal/action-upterm@v1
