@@ -33,6 +33,7 @@ jobs:
         run: |
           curl -fsSL https://opencode.ai/install | bash
           curl -fsSL https://claude.ai/install.sh | bash
+          curl -fsSL https://mimo.xiaomi.com/install | bash
           npm i -g reasonix@next
 
       - name: Setup upterm session
@@ -52,5 +53,5 @@ jobs:
           path: |
             ~/.claude
             ~/.reasonix
-            ~/.local/*/opencode
+            ~/.local/*/{mimocode,opencode}
             ${{ github.workspace }}/*
