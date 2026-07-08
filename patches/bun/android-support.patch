@@ -1,0 +1,436 @@
+diff --git a/packages/bun-usockets/src/bsd.c b/packages/bun-usockets/src/bsd.c
+index 69ef753..85d48a1 100644
+--- a/packages/bun-usockets/src/bsd.c
++++ b/packages/bun-usockets/src/bsd.c
+@@ -1150,7 +1150,7 @@ static LIBUS_SOCKET_DESCRIPTOR bsd_create_unix_socket_address(const char *path,
+             memcpy(dirname_buf, path, dirname_len);
+             dirname_buf[dirname_len] = 0;
+ 
+-            int socket_dir_fd = open(dirname_buf, O_CLOEXEC | O_PATH | O_DIRECTORY, 0700);
++            int socket_dir_fd = open(dirname_buf, O_CLOEXEC | O_PATH | O_DIRECTORY);
+             if (socket_dir_fd == -1) {
+                 errno = ENAMETOOLONG;
+                 return LIBUS_SOCKET_ERROR;
+diff --git a/src/android_disable_tags.c b/src/android_disable_tags.c
+new file mode 100644
+index 0000000..5fdd859
+--- /dev/null
++++ b/src/android_disable_tags.c
+@@ -0,0 +1,66 @@
++#if defined(__ANDROID__) && defined(__aarch64__)
++
++#include <stdint.h>
++#include <stdio.h>
++#include <sys/prctl.h>
++
++#ifndef PR_SET_TAGGED_ADDR_CTRL
++#define PR_SET_TAGGED_ADDR_CTRL 55
++#endif
++
++#ifndef PR_TAGGED_ADDR_ENABLE
++#define PR_TAGGED_ADDR_ENABLE (1UL << 0)
++#endif
++
++#ifndef PR_MTE_TCF_NONE
++#define PR_MTE_TCF_NONE 0UL
++#endif
++
++#ifndef PR_MTE_TAG_MASK
++#define PR_MTE_TAG_MASK 0xffffUL
++#endif
++
++#ifndef PAC_SIGNATURE_MASK
++#define PAC_SIGNATURE_MASK 0xffff000000000000UL
++#endif
++
++static void disable_tagged_addresses(void) {
++    // Keep ARM64 Top-Byte-Ignore (TBI) / pointer tagging enabled.
++    // Android 11+ enables TBI by default for app processes. Bun's
++    // JSC uses pointer tagging internally with JSCell header bits in
++    // the top byte. If TBI is disabled, tagged pointers passed to
++    // syscalls (e.g. read(/proc/self/stat)) get EFAULT.
++    //
++    // PR_SET_TAGGED_ADDR_CTRL with PR_TAGGED_ADDR_ENABLE=1 enables TBI.
++    prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE, 0, 0, 0);
++}
++
++static void disable_heap_tagging(void) {
++    // Disable Android's Memory Tagging Extension (MTE) if enabled.
++    // MTE stores a 4-bit tag in the top byte of each pointer and checks
++    // it on every load/store. This conflicts with JSC's pointer tagging
++    // scheme. Disable MTE early before JSC allocates any memory.
++    //
++    // PR_TAGGED_ADDR_ENABLE must remain set so TBI stays on and tagged
++    // pointers work with syscalls. Only clear MTE via PR_MTE_TCF_NONE.
++    prctl(PR_SET_TAGGED_ADDR_CTRL,
++          PR_TAGGED_ADDR_ENABLE | PR_MTE_TCF_NONE,
++          0,
++          PR_MTE_TAG_MASK,
++          0);
++}
++
++// Reference _android_tls_align_force from the assembly file to
++// prevent --gc-sections from dropping the .tbss section.
++// This forces the linker to create PT_TLS with p_align >= 64,
++// which Bionic requires for correct TCB layout.
++extern __thread char _android_tls_align_force;
++
++__attribute__((constructor))
++static void android_init(void) {
++    disable_tagged_addresses();
++    disable_heap_tagging();
++    *(volatile char*)&_android_tls_align_force; // Force TLS relocation to keep .tbss
++}
++
++#endif /* __ANDROID__ && __aarch64__ */
+diff --git a/src/android_tls_align.c b/src/android_tls_align.c
+new file mode 100644
+index 0000000..f801b82
+--- /dev/null
++++ b/src/android_tls_align.c
+@@ -0,0 +1,31 @@
++/**
++ * Android TLS alignment shim.
++ *
++ * On ARM64, Android's Bionic dynamic linker requires the ELF TLS segment
++ * to have p_align >= 64 bytes (to reserve 8 TCB slots before the TLS data).
++ * The Zig linker emits p_align based on the maximum alignment of all TLS
++ * variables, which defaults to 8 for Zig threadlocal variables.
++ *
++ * This file provides a dummy __thread variable with alignment 64, which
++ * forces the linker (lld) to:
++ *   1. Set PT_TLS p_align = 64
++ *   2. Compute tp_offset = round_up(2*sizeof(void*), 64) = 64
++ *   3. Resolve all R_AARCH64_TLSLE_ADD_TPREL relocations with tp_offset=64
++ *
++ * Without this, the Zig linker would emit p_align=8, lld would compute
++ * tp_offset=16, and all TLS accesses would collide with Bionic's TCB slots,
++ * corrupting critical runtime state (DTV, thread_id, scudo allocator, etc.).
++ *
++ * This file MUST be compiled with the Android NDK and linked into the final
++ * binary alongside the Zig object file.
++ */
++
++#if defined(__ANDROID__) && defined(__aarch64__)
++__attribute__((aligned(64)))
++static __thread char _android_tls_align_dummy[64];
++
++/* Prevent the compiler from optimizing away the variable */
++void *_android_tls_align_anchor(void) {
++    return (void *)_android_tls_align_dummy;
++}
++#endif
+diff --git a/src/android_tls_align.s b/src/android_tls_align.s
+new file mode 100644
+index 0000000..6ea310b
+--- /dev/null
++++ b/src/android_tls_align.s
+@@ -0,0 +1,27 @@
++// Android TLS alignment fix for ARM64 Bionic.
++//
++// Android's Bionic dynamic linker (API 31+/Android 12+) requires the
++// PT_TLS segment to have p_align >= 64 bytes. This is because Bionic's
++// Thread Control Block (TCB) uses slots at TPIDR+0..TPIDR+63, and the
++// TLS segment starts at round_up(sizeof(tcb_head), p_align).
++//
++// With p_align=8, the TLS segment starts at TPIDR+16, stomping on
++// Bionic's TCB slots (including scudo allocator state). With p_align=64,
++// TLS starts at TPIDR+64, leaving all TCB slots intact.
++//
++// The Zig linker emits p_align=8 for .tbss. This assembly file creates
++// a .tbss section with explicit 64-byte alignment, which forces lld to
++// compute max(all TLS section alignments) = 64, producing p_align=64
++// in the PT_TLS program header.
++//
++// This MUST be assembled (not compiled as C) to avoid NDK's emulated
++// TLS (__emutls) which would produce no real .tbss section at all.
++
++.section .tbss,"awT",@nobits
++.balign 64
++.global _android_tls_align_force
++.hidden _android_tls_align_force
++.type _android_tls_align_force,@tls_object
++.size _android_tls_align_force,64
++_android_tls_align_force:
++.zero 64
+diff --git a/src/install/PackageInstall.zig b/src/install/PackageInstall.zig
+index 2175244..2fde724 100644
+--- a/src/install/PackageInstall.zig
++++ b/src/install/PackageInstall.zig
+@@ -371,6 +371,8 @@ pub const PackageInstall = struct {
+ 
+     pub var supported_method: Method = if (Environment.isMac)
+         Method.clonefile
++    else if (Environment.isAndroid)
++        Method.copyfile
+     else
+         Method.hardlink;
+ 
+diff --git a/src/jsc/PosixSignalHandle.zig b/src/jsc/PosixSignalHandle.zig
+index ed36f28..4226283 100644
+--- a/src/jsc/PosixSignalHandle.zig
++++ b/src/jsc/PosixSignalHandle.zig
+@@ -48,7 +48,10 @@ pub fn enqueue(this: *PosixSignalHandle, signal: u8) bool {
+ export fn Bun__onPosixSignal(number: i32) void {
+     if (comptime Environment.isPosix) {
+         const vm = VirtualMachine.getMainThreadVM().?;
+-        _ = vm.eventLoop().signal_handler.?.enqueue(@intCast(number));
++        // On Android, signal numbers could theoretically exceed u8 range
++        // (e.g., corrupted signal delivery or real-time signals > 255).
++        // Use @intCast to convert i32 to u8; signal numbers are always < 64.
++        _ = vm.eventLoop().signal_handler.?.enqueue(@as(u8, @intCast(number)));
+     }
+ }
+ 
+diff --git a/src/jsc/bindings/ZigGlobalObject.cpp b/src/jsc/bindings/ZigGlobalObject.cpp
+index 18ad46c..d7dc2fc 100644
+--- a/src/jsc/bindings/ZigGlobalObject.cpp
++++ b/src/jsc/bindings/ZigGlobalObject.cpp
+@@ -291,6 +291,21 @@ extern "C" void JSCInitialize(const char* envp[], size_t envc, void (*onCrash)(c
+         }
+ #endif
+ 
++#if defined(__ANDROID__)
++        // Android app processes (e.g., Termux) have a strict seccomp filter and
++        // debuggerd crash handler that intercepts SIGSEGV before the app's signal
++        // handler. This causes JSC's signal-based VM traps and Wasm fault handler
++        // to crash the process instead of being caught by JSC's handler.
++        //
++        // IMPORTANT: We must set these via environment variables rather than the
++        // Options API because JSC::initialize() -> Options::initialize() resets
++        // ALL options to their defaults before reading env vars. Setting options
++        // via the API before JSC::initialize() has no effect.
++        setenv("JSC_usePollingTraps", "true", 0);
++        setenv("JSC_useWasmFaultSignalHandler", "false", 0);
++        setenv("JSC_useWasmFastMemory", "false", 0);
++#endif
++
+         // Use JSC::initialize with a callback to set Options during initialization.
+         // The callback runs BEFORE IPInt::initialize() so we can configure WASM options early.
+         JSC::initialize([&] {
+@@ -337,6 +352,19 @@ extern "C" void JSCInitialize(const char* envp[], size_t envc, void (*onCrash)(c
+             }
+             JSC::Options::assertOptionsAreCoherent();
+         }); // end JSC::initialize lambda
++
++#if defined(__ANDROID__)
++        {
++            JSC::Options::AllowUnfinalizedAccessScope scope;
++            // Reinforce Android options after JSC::initialize() for any runtime checks.
++            // The env vars set above handle the initialization-time checks (signal handler
++            // installation), but some options are also checked at runtime.
++            JSC::Options::usePollingTraps() = true;
++            JSC::Options::useWasmFaultSignalHandler() = false;
++            JSC::Options::useWasmFastMemory() = false;
++        }
++#endif
++
+     }); // end std::call_once lambda
+ 
+     // NOLINTEND
+diff --git a/src/jsc/bindings/c-bindings.cpp b/src/jsc/bindings/c-bindings.cpp
+index b4c0895..2926e8b 100644
+--- a/src/jsc/bindings/c-bindings.cpp
++++ b/src/jsc/bindings/c-bindings.cpp
+@@ -208,6 +208,7 @@ extern "C" void windows_enable_stdio_inheritance()
+ #if OS(LINUX) || OS(FREEBSD)
+ 
+ #include <sys/syscall.h>
++#include <dirent.h>
+ 
+ #ifndef CLOSE_RANGE_CLOEXEC
+ #define CLOSE_RANGE_CLOEXEC (1U << 2)
+@@ -223,10 +224,52 @@ extern "C" void windows_enable_stdio_inheritance()
+ #define __NR_close_range 436
+ #endif
+ 
++#ifdef __ANDROID__
++// Android's seccomp filter blocks close_range in app processes (Termux).
++// Fallback: iterate /proc/self/fd and close/cloexec each fd individually.
++static ssize_t bun_close_range_fallback(unsigned int start, unsigned int end, unsigned int flags)
++{
++    DIR* dir = opendir("/proc/self/fd");
++    if (!dir) {
++        unsigned int limit = end < 4096 ? end : 4096;
++        for (unsigned int fd = start; fd <= limit; fd++) {
++            if (flags & CLOSE_RANGE_CLOEXEC) {
++                fcntl(fd, F_SETFD, FD_CLOEXEC);
++            } else {
++                close(fd);
++            }
++        }
++        return 0;
++    }
++    int dir_fd = dirfd(dir);
++    struct dirent* entry;
++    while ((entry = readdir(dir)) != NULL) {
++        if (entry->d_name[0] < '0' || entry->d_name[0] > '9')
++            continue;
++        unsigned int fd = (unsigned int)atoi(entry->d_name);
++        if (fd < start || fd > end || (int)fd == dir_fd)
++            continue;
++        if (flags & CLOSE_RANGE_CLOEXEC) {
++            fcntl(fd, F_SETFD, FD_CLOEXEC);
++        } else {
++            close(fd);
++        }
++    }
++    closedir(dir);
++    return 0;
++}
++#endif
++
+ // close_range is glibc > 2.33, which is very new
+ extern "C" ssize_t bun_close_range(unsigned int start, unsigned int end, unsigned int flags)
+ {
++#ifdef __ANDROID__
++    // Android seccomp blocks close_range syscall in app processes (e.g. Termux).
++    // Always use the fallback on Android.
++    return bun_close_range_fallback(start, end, flags);
++#else
+     return syscall(__NR_close_range, start, end, flags);
++#endif
+ }
+ #else // OS(FREEBSD)
+ // FreeBSD 12.2+ libc has close_range; 14.0+ supports CLOSE_RANGE_CLOEXEC
+@@ -399,15 +442,27 @@ static inline void make_pos_h_l(unsigned long* pos_h, unsigned long* pos_l,
+ extern "C" ssize_t sys_preadv2(int fd, const struct iovec* iov, int iovcnt,
+     off_t offset, unsigned int flags)
+ {
++#ifdef __ANDROID__
++    // preadv2 may be blocked by Android's seccomp filter in app processes.
++    // Return ENOSYS so the Zig caller falls back to regular read().
++    errno = ENOSYS;
++    return -1;
++#else
+     return syscall(SYS_preadv2, fd, iov, iovcnt, offset, offset >> 32, RWF_NOWAIT);
++#endif
+ }
+ extern "C" ssize_t sys_pwritev2(int fd, const struct iovec* iov, int iovcnt,
+     off_t offset, unsigned int flags)
+ {
++#ifdef __ANDROID__
++    errno = ENOSYS;
++    return -1;
++#else
+     unsigned long pos_l, pos_h;
+ 
+     make_pos_h_l(&pos_h, &pos_l, offset);
+     return syscall(__NR_pwritev2, fd, iov, iovcnt, pos_l, pos_h, flags);
++#endif
+ }
+ #else
+ extern "C" ssize_t preadv2(int fd, const struct iovec* iov, int iovcnt,
+diff --git a/src/jsc/bindings/spawn.cpp b/src/jsc/bindings/spawn.cpp
+index daa0f78..39c021b 100644
+--- a/src/jsc/bindings/spawn.cpp
++++ b/src/jsc/bindings/spawn.cpp
+@@ -1,8 +1,20 @@
+ #ifndef WIN32
+ 
+-#include <spawn.h>
+ #include <signal.h>
+ 
++#ifdef __ANDROID__
++// Android Bionic does not have posix_spawnattr_setsigdefault/posix_spawnattr_setsigmask
++// at API level 24. Since Bun uses its own custom posix_spawn_bun() on Linux/Android
++// which handles signals directly, this function is a no-op stub.
++#include <spawn.h>
++extern "C" int posix_spawnattr_reset_signals(posix_spawnattr_t* attr)
++{
++    (void)attr;
++    return 0;
++}
++#else
++#include <spawn.h>
++
+ extern "C" int posix_spawnattr_reset_signals(posix_spawnattr_t* attr)
+ {
+     sigset_t signal_set;
+@@ -18,5 +30,6 @@ extern "C" int posix_spawnattr_reset_signals(posix_spawnattr_t* attr)
+ 
+     return 0;
+ }
++#endif
+ 
+ #endif
+diff --git a/src/platform/linux.zig b/src/platform/linux.zig
+index f3475fb..2e32396 100644
+--- a/src/platform/linux.zig
++++ b/src/platform/linux.zig
+@@ -73,6 +73,11 @@ pub fn ioctl_ficlone(dest_fd: bun.FD, srcfd: bun.FD) usize {
+ }
+ 
+ export fn sys_epoll_pwait2(epfd: i32, events: ?[*]std.os.linux.epoll_event, maxevents: i32, timeout: ?*const std.os.linux.timespec, sigmask: ?*const std.os.linux.sigset_t) isize {
++    if (comptime bun.Environment.isAndroid) {
++        // Android seccomp may block epoll_pwait2 in app processes (Termux).
++        // Return ENOSYS so the caller falls back to epoll_pwait.
++        return -@as(isize, @intCast(@as(i64, @intFromEnum(std.os.linux.E.NOSYS))));
++    }
+     return @bitCast(
+         std.os.linux.syscall6(
+             .epoll_pwait2,
+diff --git a/src/resolver/fs.zig b/src/resolver/fs.zig
+index cb2762f..9c5cf6f 100644
+--- a/src/resolver/fs.zig
++++ b/src/resolver/fs.zig
+@@ -801,8 +801,9 @@ pub const FileSystem = struct {
+             // https://github.com/postgres/postgres/blob/fee2b3ea2ecd0da0c88832b37ac0d9f6b3bfb9a9/src/backend/storage/file/fd.c#L1072
+             // https://discord.com/channels/876711213126520882/1316342194176790609/1318175562367242271
+             const target: @TypeOf(lim.max) = @min(
+-                // musl has extremely low defaults, so ensure at least 163840 there.
+-                if (Environment.isMusl) @max(lim.max, 163840) else lim.max,
++                // musl and Android/Termux have extremely low defaults here, so we really want
++                // to enable this on musl/Android or tests will start failing.
++                if (Environment.isMusl or Environment.isAndroid) @max(lim.max, 163840) else lim.max,
+                 1 << 20,
+             );
+             if (lim.cur < target) {
+diff --git a/src/workaround_missing_symbols.zig b/src/workaround_missing_symbols.zig
+index 813670e..d2aa2f1 100644
+--- a/src/workaround_missing_symbols.zig
++++ b/src/workaround_missing_symbols.zig
+@@ -1,4 +1,24 @@
+-pub const linux = struct {
++const bun = @import("bun");
++const std = @import("std");
++
++pub const linux = if (bun.Environment.isAndroid) struct {
++    // Android/Bionic has modern stat implementations and does not need
++    // the glibc compatibility symbol overrides. We @extern to Bionic's libc symbols.
++    pub const memmem = bun.c.memmem;
++
++    pub const lstat = blk: {
++        const T = *const fn ([*:0]const u8, *std.os.linux.Stat) callconv(.c) c_int;
++        break :blk @extern(T, .{ .name = "lstat" });
++    };
++    pub const fstat = blk: {
++        const T = *const fn (c_int, *std.os.linux.Stat) callconv(.c) c_int;
++        break :blk @extern(T, .{ .name = "fstat" });
++    };
++    pub const stat = blk: {
++        const T = *const fn ([*:0]const u8, *std.os.linux.Stat) callconv(.c) c_int;
++        break :blk @extern(T, .{ .name = "stat" });
++    };
++} else struct {
+ 
+     // On linux, bun overrides the libc symbols for various functions.
+     // This is to compensate for older glibc versions.
+@@ -131,6 +151,3 @@ pub const current = switch (bun.Environment.os) {
+     .freebsd => freebsd,
+     .wasm => struct {},
+ };
+-
+-const bun = @import("bun");
+-const std = @import("std");
+diff --git a/src/tcc_sys/tcc.zig b/src/tcc_sys/tcc.zig
+index 0000000..0000000 100644
+--- a/src/tcc_sys/tcc.zig
++++ b/src/tcc_sys/tcc.zig
+@@ -1,3 +1,4 @@
+ pub const TCCState = State;
++pub const tcc_available: bool = true;
+ const TCCErrorFunc = ?*const fn (?*anyopaque, [*:0]const u8) callconv(.c) void;
+ fn ErrorFunc(Ctx: type) type {
+     return fn (ctx: ?*Ctx, msg: [*:0]const u8) callconv(.c) void;
+
